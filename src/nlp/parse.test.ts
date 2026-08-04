@@ -41,6 +41,15 @@ describe('parse', () => {
     expect(result.unusedNumbers).toEqual([]);
   });
 
+  it('reads a raised landing surface as the final position', () => {
+    const result = parse(
+      'a ball is dropped from 100 m on a platform 15 m off the ground',
+    );
+    expect(value(result, 'x1')).toBe(100);
+    expect(value(result, 'x2')).toBe(15);
+    expect(result.unusedNumbers).toEqual([]);
+  });
+
   it('converts explicit imperial units through the math core', () => {
     const result = parse('dropped from a height of 60 ft');
     expect(value(result, 'x1')).toBeCloseTo(18.288, 3);

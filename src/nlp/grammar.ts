@@ -266,13 +266,20 @@ export const RULES: Rule[] = [
   // Final position: the height of what it lands on → x₂ (positive up).
   numberRule(
     'x2-obstacle',
-    'landing height N (lands on an object N tall)',
+    'landing height N (lands on an object N tall / on a surface N up)',
     [
       ['that', 'is'],
       ['lands', 'on', 'a'],
       ['onto', 'a'],
       ['on', 'top', 'of', 'a'],
       ['onto'],
+      // Landing on a raised surface: "on a platform 15 m off the ground".
+      ['on', 'a', 'platform'],
+      ['on', 'a', 'ledge'],
+      ['on', 'a', 'roof'],
+      ['on', 'a', 'table'],
+      ['on', 'a', 'shelf'],
+      ['on', 'a', 'ledge', 'that', 'is'],
     ],
     {
       variable: 'x2',
