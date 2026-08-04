@@ -1,0 +1,119 @@
+.panel {
+  background: var(--panel);
+  border: var(--edge);
+  box-shadow: var(--glow);
+  clip-path: var(--clip-corner);
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+.title {
+  margin: 0 0 0.9rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr 3.2rem;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.symbol {
+  font-size: 1.05rem;
+  text-align: right;
+  color: var(--text-bright);
+}
+
+.input {
+  width: 100%;
+  background: #05090d;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  padding: 0.45rem 0.6rem;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--glow);
+}
+
+.input.solved {
+  color: var(--good);
+  border-color: rgba(56, 249, 176, 0.4);
+  border-style: dashed;
+}
+
+.unit {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  flex: 1;
+  min-width: 5rem;
+  background: transparent;
+  border: 1px solid var(--panel-edge);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  box-shadow: var(--glow);
+  color: var(--text-bright);
+}
+
+.toggle {
+  display: flex;
+  border: 1px solid var(--panel-edge);
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.toggleOption {
+  flex: 1;
+  text-align: center;
+  padding: 0.4rem;
+  cursor: pointer;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.toggleOption.active {
+  background: rgba(0, 229, 255, 0.12);
+  color: var(--accent);
+}
+
+.hint {
+  margin: 0.2rem 0 0.9rem;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}

@@ -374,5 +374,11 @@ Enabled by the layered design; **not** built in v1.
   with unit folding, dimension guarding, and graceful degradation (unused
   numbers reported). Exempt from the core gates — needs its own standards
   system (see §12). 92 tests total across the project.
+- ✅ `state/` (Zustand) + `ui/` (React, CSS Modules, KaTeX, Chart.js): manual
+  variable form with auto-solve, unit toggle (real metric↔imperial conversion),
+  Storymode text/voice input → parser, KaTeX worked-solution steps, dual-axis
+  motion chart. Tron / low-poly theme via design tokens. Verified end-to-end in
+  a browser.
 - ⬜ NLP standards system (labeled phrase corpus + precision/recall).
-- ⬜ `ui/` (Tron theme), `state/`.
+- ⬜ Polish: bundle code-splitting (chart.js/KaTeX are heavy), interactive
+  (Socratic) tutor phase, additional domains.

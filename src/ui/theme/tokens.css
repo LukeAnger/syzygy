@@ -1,0 +1,60 @@
+/* Syzygy design tokens — Tron / low-poly. Dark, gridded, neon, angular. */
+
+:root {
+  --bg: #05070a;
+  --bg-grid: rgba(0, 229, 255, 0.05);
+  --panel: #0a1017;
+  --panel-edge: rgba(0, 229, 255, 0.28);
+  --panel-edge-strong: rgba(0, 229, 255, 0.6);
+
+  --accent: #00e5ff;
+  --accent-dim: #0891a3;
+  --accent-2: #ff6a00;
+  --accent-2-dim: #a34600;
+
+  --text: #cfe8ee;
+  --text-dim: #6f8a92;
+  --text-bright: #eafcff;
+
+  --danger: #ff4d6d;
+  --good: #38f9b0;
+
+  --glow: 0 0 10px rgba(0, 229, 255, 0.45);
+  --glow-2: 0 0 10px rgba(255, 106, 0, 0.45);
+
+  --edge: 1px solid var(--panel-edge);
+  --radius: 2px;
+
+  --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', ui-monospace, monospace;
+
+  --clip-corner: polygon(
+    0 10px,
+    10px 0,
+    100% 0,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    0 100%
+  );
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--bg-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numeric readouts in KaTeX pick up the accent by default. */
+.katex {
+  color: var(--text-bright);
+}

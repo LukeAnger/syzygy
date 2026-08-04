@@ -1,0 +1,26 @@
+.panel {
+  background: var(--panel);
+  border: var(--edge);
+  box-shadow: var(--glow);
+  clip-path: var(--clip-corner);
+  padding: 1.1rem 1.4rem 1.4rem;
+  margin-top: 1rem;
+}
+
+.title {
+  margin: 0 0 0.8rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.empty {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.canvasWrap {
+  height: 260px;
+}

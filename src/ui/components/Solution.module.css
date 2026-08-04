@@ -1,0 +1,94 @@
+.panel {
+  background: var(--panel);
+  border: var(--edge);
+  box-shadow: var(--glow);
+  clip-path: var(--clip-corner);
+  padding: 1.1rem 1.4rem 1.4rem;
+}
+
+.title {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.empty {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.step {
+  border-left: 2px solid var(--accent-dim);
+  padding: 0.2rem 0 0.9rem 1rem;
+  margin-bottom: 0.4rem;
+  position: relative;
+}
+
+.step::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 0.35rem;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  box-shadow: var(--glow);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.stepHead {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.3rem;
+}
+
+.stepHead b {
+  color: var(--accent);
+}
+
+.inputs {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin: 0.35rem 0;
+}
+
+.result {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  color: var(--good);
+  margin-top: 0.35rem;
+}
+
+.discard {
+  font-size: 0.72rem;
+  color: var(--danger);
+  margin-top: 0.3rem;
+  font-family: var(--font-mono);
+}
+
+.summary {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--panel-edge);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.4rem;
+}
+
+.summaryItem {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-bright);
+}
+
+.unsolved {
+  margin-top: 1rem;
+  font-size: 0.76rem;
+  color: var(--accent-2);
+}
