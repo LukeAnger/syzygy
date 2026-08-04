@@ -298,16 +298,30 @@ Proposed new layout:
 
 ---
 
-## 12. Testing strategy
+## 12. Testing strategy & CI
 
 - `math/`: exhaustive unit tests (arithmetic, dimensions, conversions,
   formatting).
 - `engine/`: solve-order, auto-solve-all, multi-root selection, unsolvable/
   under-determined cases.
 - `domains/kinematics-1d`: every closed form vs. known worked examples
-  (including the two from the current `TimeSolver.test.js`).
+  (including the two from the legacy `TimeSolver.test.js`).
 - `nlp/`: one test per grammar phrase + graceful-degradation cases.
 - `ui/`: light component/render smoke tests.
+
+**CI pipeline** (`.github/workflows/ci.yml`, runs on every push and PR):
+lint → typecheck → **test-approval standard** → coverage → build. `npm run ci`
+runs the identical sequence locally.
+
+**Test-approval standards for `math/` and `domains/`** — the computational
+core is gated harder than the rest of the app:
+
+1. **Colocated tests** (`scripts/check-colocated-tests.mjs`): every runtime
+   module under `src/math/` and `src/domains/` must ship a sibling
+   `*.test.ts`. New equations/domains cannot merge test-less. Barrels
+   (`index.ts`) and `*.d.ts` are exempt.
+2. **Coverage thresholds** (Vitest v8, scoped to `src/math/**` and
+   `src/domains/**`): statements 95%, branches 90%, functions 95%, lines 95%.
 
 ---
 
@@ -339,7 +353,9 @@ Enabled by the layered design; **not** built in v1.
 - ✅ Vite + TypeScript scaffold at root; legacy app preserved under `legacy/`
   and tagged `v1-legacy`.
 - ✅ `math/` core built and tested: dimensional `Quantity` arithmetic, real
-  metric/imperial units, 3-sig-fig formatting, gravity constant (37 tests).
+  metric/imperial units, 3-sig-fig formatting, gravity constant (38 tests).
+- ✅ CI pipeline + test-approval standards (colocated tests + coverage gates)
+  for `math/` and `domains/`.
 - ⬜ `engine/` constraint-propagation solver.
 - ⬜ `domains/kinematics-1d` SUVAT pack.
 - ⬜ `nlp/`, `ui/` (Tron theme), `state/`.
