@@ -18,8 +18,8 @@ describe('buildKnowns', () => {
   });
 
   it('converts imperial inputs to SI', () => {
-    const knowns = buildKnowns({ ...DEFAULT_INPUTS, dx: '10', a: '' }, 'imperial');
-    expect(knowns['dx']?.value).toBeCloseTo(3.048, 3);
+    const knowns = buildKnowns({ ...DEFAULT_INPUTS, x1: '10', a: '' }, 'imperial');
+    expect(knowns['x1']?.value).toBeCloseTo(3.048, 3);
   });
 
   it('ignores non-numeric input', () => {
@@ -31,7 +31,7 @@ describe('buildKnowns', () => {
 describe('solveInputs', () => {
   it('auto-solves the remaining variables', () => {
     const result = solveInputs(
-      { v0: '-40', v: '-80', a: '-9.82', t: '', dx: '' },
+      { x1: '', x2: '', v0: '-40', v: '-80', a: '-9.82', t: '' },
       'metric',
     );
     expect(result.knowns['t']?.value).toBeCloseTo(4.0733, 3);
@@ -59,8 +59,8 @@ describe('assignmentsToInputs', () => {
 
 describe('convertInputs', () => {
   it('re-expresses inputs when the unit system changes', () => {
-    const converted = convertInputs({ ...DEFAULT_INPUTS, dx: '100' }, 'metric', 'imperial');
-    expect(Number(converted.dx)).toBeCloseTo(328.084, 2);
+    const converted = convertInputs({ ...DEFAULT_INPUTS, x1: '100' }, 'metric', 'imperial');
+    expect(Number(converted.x1)).toBeCloseTo(328.084, 2);
     expect(Number(converted.a)).toBeCloseTo(-32.185, 2);
   });
 
@@ -83,11 +83,28 @@ describe('store: Storymode is self-contained', () => {
 
     expect(state.story).toBe('dropped from a height of 45 m');
     expect(state.inputs.v0).toBe('0');
-    expect(state.inputs.dx).toBe('-45');
-    expect(state.given.sort()).toEqual(['dx', 'v0']);
+    expect(state.inputs.x1).toBe('45');
+    // No final position stated ⇒ "falls to the ground" default x₂ = 0.
+    expect(state.inputs.x2).toBe('0');
+    expect(state.given.sort()).toEqual(['v0', 'x1', 'x2']);
     // The story alone is enough to solve — no manual entry needed.
     const result = solveInputs(state.inputs, state.unitSystem);
     expect(result.unsolved).toEqual([]);
+  });
+
+  it('separates two positions for an obstacle problem', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory(
+        'a ball is dropped from a platform 100 m and lands on a truck that is 4 m tall',
+      );
+    const state = useKinematicsStore.getState();
+    expect(state.inputs.x1).toBe('100');
+    expect(state.inputs.x2).toBe('4');
+    const result = solveInputs(state.inputs, state.unitSystem);
+    // Falls 96 m, not 100 — speed ≈ 43.4 m/s.
+    expect(result.knowns['dx']?.value).toBeCloseTo(-96, 6);
+    expect(result.knowns['v']?.value).toBeCloseTo(-43.4, 1);
   });
 
   it('reports numbers it could not place', () => {

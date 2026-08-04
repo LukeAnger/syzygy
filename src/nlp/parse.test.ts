@@ -21,18 +21,29 @@ describe('parse', () => {
   it('parses a height + time problem', () => {
     const result = parse('A ball dropped from 100 m falls for 4.5 s');
     expect(value(result, 'v0')).toBe(0);
-    expect(value(result, 'dx')).toBe(-100);
+    expect(value(result, 'x1')).toBe(100);
     expect(value(result, 't')).toBe(4.5);
   });
 
-  it('parses "from a height of N" with metric default', () => {
+  it('parses "from a height of N" as the starting position', () => {
     const result = parse('A rock is dropped from a height of 45 m');
-    expect(value(result, 'dx')).toBe(-45);
+    expect(value(result, 'x1')).toBe(45);
+  });
+
+  it('separates two positions instead of guessing a displacement', () => {
+    // The case that motivated x₁/x₂: fall height minus obstacle height.
+    const result = parse(
+      'a ball is dropped from a platform 100 m in the air and lands on a truck that is 4 meters tall',
+    );
+    expect(value(result, 'v0')).toBe(0);
+    expect(value(result, 'x1')).toBe(100);
+    expect(value(result, 'x2')).toBe(4);
+    expect(result.unusedNumbers).toEqual([]);
   });
 
   it('converts explicit imperial units through the math core', () => {
     const result = parse('dropped from a height of 60 ft');
-    expect(value(result, 'dx')).toBeCloseTo(-18.288, 3);
+    expect(value(result, 'x1')).toBeCloseTo(18.288, 3);
   });
 
   it('reports numbers it could not place, assigning nothing', () => {

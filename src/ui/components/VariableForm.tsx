@@ -1,5 +1,5 @@
 import type { SolveResult } from '../../engine/index.ts';
-import { type VariableKey, useKinematicsStore } from '../../state/index.ts';
+import { type InputKey, useKinematicsStore } from '../../state/index.ts';
 import { VARIABLES, symbolLatex, unitSymbol } from '../units.ts';
 import { Katex } from './Katex.tsx';
 import styles from './VariableForm.module.css';
@@ -45,7 +45,7 @@ export function VariableForm({ result }: VariableFormProps) {
         Enter the values you know. Blank fields are solved automatically.
       </p>
 
-      {VARIABLES.map((key: VariableKey) => {
+      {VARIABLES.map((key: InputKey) => {
         const solved = solvedKeys.has(key);
         return (
           <div key={key} className={styles.row}>

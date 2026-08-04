@@ -18,18 +18,23 @@ import { type Knowns, type SolveResult, solve } from '../engine/index.ts';
 import { kinematics1D } from '../domains/kinematics-1d/index.ts';
 import { type Assignment, parse } from '../nlp/index.ts';
 
-export type VariableKey = 'v0' | 'v' | 'a' | 't' | 'dx';
-export type Inputs = Record<VariableKey, string>;
+/** Every solver variable, including the derived displacement `dx`. */
+export type VariableKey = 'v0' | 'v' | 'a' | 't' | 'x1' | 'x2' | 'dx';
+/** The variables a user actually enters — displacement is derived, not typed. */
+export type InputKey = Exclude<VariableKey, 'dx'>;
+export type Inputs = Record<InputKey, string>;
 
-const VARIABLE_KEYS: VariableKey[] = ['v0', 'v', 'a', 't', 'dx'];
+/** Display / form order. */
+export const INPUT_KEYS: InputKey[] = ['x1', 'x2', 'v0', 'v', 'a', 't'];
 
 /** Free fall is the default landing preset: gravity in, everything else blank. */
 export const DEFAULT_INPUTS: Inputs = {
+  x1: '',
+  x2: '',
   v0: '',
   v: '',
   a: '-9.81',
   t: '',
-  dx: '',
 };
 
 function variable(key: VariableKey) {
@@ -41,8 +46,8 @@ function variable(key: VariableKey) {
 /** Parse the non-empty inputs into a `Knowns` map of SI-based quantities. */
 export function buildKnowns(inputs: Inputs, system: UnitSystem): Knowns {
   const kit = unitKit(system);
-  const knowns: Record<VariableKey, Quantity> = {} as Record<VariableKey, Quantity>;
-  for (const key of VARIABLE_KEYS) {
+  const knowns: Record<string, Quantity> = {};
+  for (const key of INPUT_KEYS) {
     const raw = inputs[key].trim();
     if (raw === '') continue;
     const value = Number(raw);
@@ -59,7 +64,7 @@ export function solveInputs(inputs: Inputs, system: UnitSystem): SolveResult {
 
 /** Format an SI quantity as a plain input string in the given system's unit. */
 function quantityToInput(
-  key: VariableKey,
+  key: InputKey,
   quantity: Quantity,
   system: UnitSystem,
 ): string {
@@ -75,8 +80,8 @@ export function assignmentsToInputs(
 ): Partial<Inputs> {
   const inputs: Partial<Inputs> = {};
   for (const assignment of assignments) {
-    if ((VARIABLE_KEYS as string[]).includes(assignment.variable)) {
-      const key = assignment.variable as VariableKey;
+    if ((INPUT_KEYS as string[]).includes(assignment.variable)) {
+      const key = assignment.variable as InputKey;
       inputs[key] = quantityToInput(key, assignment.quantity, system);
     }
   }
@@ -93,7 +98,7 @@ export function convertInputs(
   const fromKit = unitKit(from);
   const toKit = unitKit(to);
   const next: Inputs = { ...inputs };
-  for (const key of VARIABLE_KEYS) {
+  for (const key of INPUT_KEYS) {
     const raw = inputs[key].trim();
     if (raw === '') continue;
     const value = Number(raw);
@@ -106,8 +111,8 @@ export function convertInputs(
 
 export type Mode = 'story' | 'manual';
 
-/** Variable keys the current story actually supplied (excludes solver output). */
-export type GivenKeys = VariableKey[];
+/** Input keys the current story actually supplied (excludes solver output). */
+export type GivenKeys = InputKey[];
 
 export interface KinematicsState {
   mode: Mode;
@@ -120,7 +125,7 @@ export interface KinematicsState {
   /** Numbers the parser could not place, surfaced from the last parse. */
   unusedNumbers: number[];
   setMode(mode: Mode): void;
-  setInput(key: VariableKey, value: string): void;
+  setInput(key: InputKey, value: string): void;
   setUnitSystem(system: UnitSystem): void;
   loadStory(text: string): void;
   loadFreeFall(): void;
@@ -149,6 +154,9 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   loadStory: (text) => {
     const result = parse(text);
     const parsed = assignmentsToInputs(result.assignments, get().unitSystem);
+    // "Falls to the ground": if a starting position is given but no final one,
+    // assume the object lands at x₂ = 0 so the problem is fully determined.
+    if (parsed.x1 !== undefined && parsed.x2 === undefined) parsed.x2 = '0';
     set((state) => ({
       story: text,
       given: Object.keys(parsed) as GivenKeys,

@@ -1,7 +1,7 @@
 import type { UnitSystem } from '../../math/index.ts';
 import type { SolveResult } from '../../engine/index.ts';
 import type { VariableKey } from '../../state/index.ts';
-import { VARIABLES, formatVar, symbolLatex } from '../units.ts';
+import { SUMMARY_VARIABLES, formatVar, symbolLatex } from '../units.ts';
 import { Katex } from './Katex.tsx';
 import styles from './Solution.module.css';
 
@@ -65,7 +65,7 @@ export function Solution({ result, unitSystem }: SolutionProps) {
       })}
 
       <div className={styles.summary}>
-        {VARIABLES.filter((key) => knowns[key]).map((key) => (
+        {SUMMARY_VARIABLES.filter((key) => knowns[key]).map((key) => (
           <span key={key} className={styles.summaryItem}>
             <Katex tex={symbolLatex(key)} /> ={' '}
             {formatVar(key, knowns[key]!, unitSystem)}

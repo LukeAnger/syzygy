@@ -49,17 +49,26 @@ describe('flag and time rules', () => {
   });
 });
 
-describe('displacement rules', () => {
-  it('reads "from a height of N" as negative Δx', () => {
-    const m = firstFor('from a height of 45 m', 'dx')!;
-    expect(m.quantity.value).toBe(-45);
+describe('position rules', () => {
+  it('reads "from a height of N" as the starting position x₁', () => {
+    const m = firstFor('from a height of 45 m', 'x1')!;
+    expect(m.quantity.value).toBe(45);
     expect(dimensionsEqual(m.quantity.dimension, LENGTH)).toBe(true);
   });
 
   it('reads bare "falls N m" only with an explicit length unit', () => {
-    expect(firstFor('falls 100 m', 'dx')!.quantity.value).toBe(-100);
+    expect(firstFor('falls 100 m', 'x1')!.quantity.value).toBe(100);
     // No unit ⇒ the ambiguous distance trigger must not fire.
-    expect(firstFor('falls 100', 'dx')).toBeUndefined();
+    expect(firstFor('falls 100', 'x1')).toBeUndefined();
+  });
+
+  it('reads "lands on ... that is N tall" as the final position x₂', () => {
+    const m = firstFor('lands on a truck that is 4 m tall', 'x2')!;
+    expect(m.quantity.value).toBe(4);
+  });
+
+  it('reads "hits the ground" as final position x₂ = 0', () => {
+    expect(firstFor('hits the ground', 'x2')!.quantity.value).toBe(0);
   });
 });
 

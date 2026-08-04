@@ -17,7 +17,7 @@ const ORANGE = '#ff6a00';
 const GRID = 'rgba(0, 229, 255, 0.08)';
 const TICK = '#6f8a92';
 
-/** Plots displacement and velocity over the motion once v₀, a, and t are known. */
+/** Plots position and velocity over the motion once v₀, a, and t are known. */
 export function MotionChart({ result, unitSystem }: MotionChartProps) {
   const { knowns } = result;
   const v0 = knowns['v0'];
@@ -31,14 +31,15 @@ export function MotionChart({ result, unitSystem }: MotionChartProps) {
       <section className={styles.panel}>
         <h2 className={styles.title}>Motion</h2>
         <p className={styles.empty}>
-          The displacement and velocity curves appear once time is determined.
+          The position and velocity curves appear once time is determined.
         </p>
       </section>
     );
   }
 
   const tMax = t.value; // seconds (same in both systems)
-  const lengthFactor = unitFactor('dx', unitSystem);
+  const x0 = knowns['x1']?.value ?? 0; // absolute starting position, else 0
+  const lengthFactor = unitFactor('x1', unitSystem);
   const velocityFactor = unitFactor('v', unitSystem);
 
   const labels: string[] = [];
@@ -47,7 +48,7 @@ export function MotionChart({ result, unitSystem }: MotionChartProps) {
   for (let i = 0; i <= SAMPLES; i++) {
     const tau = (tMax * i) / SAMPLES;
     labels.push(tau.toFixed(2));
-    position.push((v0.value * tau + 0.5 * a.value * tau * tau) / lengthFactor);
+    position.push((x0 + v0.value * tau + 0.5 * a.value * tau * tau) / lengthFactor);
     velocity.push((v0.value + a.value * tau) / velocityFactor);
   }
 
@@ -66,7 +67,7 @@ export function MotionChart({ result, unitSystem }: MotionChartProps) {
       },
       y: {
         position: 'left',
-        title: { display: true, text: `Δx (${unitSymbol('dx', unitSystem)})`, color: CYAN },
+        title: { display: true, text: `x (${unitSymbol('x1', unitSystem)})`, color: CYAN },
         grid: { color: GRID },
         ticks: { color: CYAN },
       },
@@ -83,7 +84,7 @@ export function MotionChart({ result, unitSystem }: MotionChartProps) {
     labels,
     datasets: [
       {
-        label: 'displacement',
+        label: 'position',
         data: position,
         borderColor: CYAN,
         backgroundColor: CYAN,

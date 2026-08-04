@@ -7,7 +7,7 @@ import {
   unitKit,
 } from '../math/index.ts';
 import { kinematics1D } from '../domains/kinematics-1d/index.ts';
-import type { VariableKey } from '../state/index.ts';
+import type { InputKey, VariableKey } from '../state/index.ts';
 
 function variable(key: VariableKey) {
   const found = kinematics1D.variables.find((v) => v.key === key);
@@ -15,7 +15,19 @@ function variable(key: VariableKey) {
   return found;
 }
 
-export const VARIABLES: VariableKey[] = ['v0', 'v', 'a', 't', 'dx'];
+/** The variables shown as form fields (displacement is derived, not entered). */
+export const VARIABLES: InputKey[] = ['x1', 'x2', 'v0', 'v', 'a', 't'];
+
+/** All variables to show in the solution summary, including derived Δx. */
+export const SUMMARY_VARIABLES: VariableKey[] = [
+  'x1',
+  'x2',
+  'v0',
+  'v',
+  'a',
+  't',
+  'dx',
+];
 
 export function symbolLatex(key: VariableKey): string {
   return variable(key).latex;

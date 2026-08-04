@@ -132,18 +132,27 @@ this replaces it.
 
 ## 5. SUVAT model
 
-Five variables:
+Variables:
 
-| Symbol | Meaning            | Base unit |
-|--------|--------------------|-----------|
-| `v0`   | initial velocity   | m/s       |
-| `v`    | final velocity     | m/s       |
-| `a`    | acceleration       | m/s²      |
-| `t`    | time               | s         |
-| `dx`   | displacement (Δx)  | m         |
+| Symbol | Meaning                    | Base unit |
+|--------|----------------------------|-----------|
+| `v0`   | initial velocity           | m/s       |
+| `v`    | final velocity             | m/s       |
+| `a`    | acceleration               | m/s²      |
+| `t`    | time                       | s         |
+| `x1`   | initial position           | m         |
+| `x2`   | final position             | m         |
+| `dx`   | displacement (Δx), derived | m         |
 
-Five equations, each omitting one variable. Given any **3** knowns, the engine
-solves the rest.
+Displacement is **derived** from the two positions via `Δx = x₂ − x₁`, not
+entered directly. This matches how problems are stated ("dropped from 100 m,
+lands on a 4 m truck" ⇒ x₁=100, x₂=4, Δx=−96) and lets the parser extract two
+positions instead of guessing that any distance is the displacement. The five
+SUVAT equations below operate on `dx`; the solver bridges positions and
+displacement through the extra position equation.
+
+The five SUVAT equations, each omitting one variable. Given any **3** of the
+core knowns, the engine solves the rest.
 
 | # | Equation                    | Omits |
 |---|-----------------------------|-------|

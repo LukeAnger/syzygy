@@ -234,29 +234,66 @@ export const RULES: Rule[] = [
     [['falls', 'for'], ['for'], ['after'], ['in'], ['time', 'of'], ['takes']],
     { variable: 't', dimension: TIME, defaultUnit: SECOND, sign: 'positive' },
   ),
+  // Starting position: the height an object begins at → x₁ (positive up).
   numberRule(
-    'height',
-    'fall height N',
+    'x1-height',
+    'starting height N',
     [
       ['from', 'a', 'height', 'of'],
       ['dropped', 'from', 'a', 'height', 'of'],
       ['height', 'of'],
       ['at', 'a', 'height', 'of'],
       ['from', 'the', 'top', 'of'],
+      ['from', 'a', 'platform'],
+      ['from', 'a', 'building'],
+      ['from', 'a', 'cliff'],
+      ['from', 'a', 'window'],
     ],
-    { variable: 'dx', dimension: LENGTH, defaultUnit: METRE, sign: 'negative' },
+    { variable: 'x1', dimension: LENGTH, defaultUnit: METRE, sign: 'positive' },
   ),
   numberRule(
-    'distance',
-    'fall distance N (explicit unit required)',
+    'x1-distance',
+    'starting height N (explicit unit required)',
     [['from'], ['dropped', 'from'], ['falls'], ['drops'], ['fell'], ['falling']],
     {
-      variable: 'dx',
+      variable: 'x1',
       dimension: LENGTH,
       defaultUnit: METRE,
-      sign: 'negative',
+      sign: 'positive',
       requireExplicitUnit: true,
     },
+  ),
+  // Final position: the height of what it lands on → x₂ (positive up).
+  numberRule(
+    'x2-obstacle',
+    'landing height N (lands on an object N tall)',
+    [
+      ['that', 'is'],
+      ['lands', 'on', 'a'],
+      ['onto', 'a'],
+      ['on', 'top', 'of', 'a'],
+      ['onto'],
+    ],
+    {
+      variable: 'x2',
+      dimension: LENGTH,
+      defaultUnit: METRE,
+      sign: 'positive',
+      requireExplicitUnit: true,
+    },
+  ),
+  // Reaching the ground fixes the final position at x₂ = 0.
+  flagRule(
+    'x2-ground',
+    'lands on the ground (x₂ = 0)',
+    [
+      ['hits', 'the', 'ground'],
+      ['reaches', 'the', 'ground'],
+      ['to', 'the', 'ground'],
+      ['on', 'the', 'ground'],
+    ],
+    'x2',
+    quantity(0, LENGTH),
   ),
   numberRule(
     'accel',

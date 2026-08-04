@@ -1,5 +1,5 @@
-import { type VariableKey, useKinematicsStore } from '../../state/index.ts';
-import { symbolLatex, unitSymbol } from '../units.ts';
+import { type InputKey, useKinematicsStore } from '../../state/index.ts';
+import { VARIABLES, symbolLatex, unitSymbol } from '../units.ts';
 import { Katex } from './Katex.tsx';
 import styles from './Understood.module.css';
 
@@ -27,12 +27,12 @@ export function Understood() {
     );
   }
 
-  const givenSet = new Set<VariableKey>(given);
+  const givenSet = new Set<InputKey>(given);
   // Acceleration is always present as the free-fall assumption unless the story
   // stated it explicitly.
-  const shown: VariableKey[] = ['v0', 'v', 'a', 't', 'dx'].filter(
-    (key) => inputs[key as VariableKey].trim() !== '',
-  ) as VariableKey[];
+  const shown: InputKey[] = VARIABLES.filter(
+    (key) => inputs[key].trim() !== '',
+  );
 
   return (
     <div className={styles.wrap}>

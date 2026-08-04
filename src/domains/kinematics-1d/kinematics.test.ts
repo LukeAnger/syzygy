@@ -151,6 +151,8 @@ describe('variables', () => {
       variables.map((v) => [v.key, v.displayUnit(kit).symbol]),
     );
     expect(bySymbol).toEqual({
+      x1: 'm',
+      x2: 'm',
       v0: 'm/s',
       v: 'm/s',
       a: 'm/s²',
@@ -165,6 +167,8 @@ describe('variables', () => {
       variables.map((v) => [v.key, v.displayUnit(kit).symbol]),
     );
     expect(bySymbol).toEqual({
+      x1: 'ft',
+      x2: 'ft',
       v0: 'ft/s',
       v: 'ft/s',
       a: 'ft/s²',
@@ -174,14 +178,43 @@ describe('variables', () => {
   });
 });
 
+describe('position: Δx = x₂ − x₁', () => {
+  const eq = eqById('position');
+  it('derives displacement from two positions', () => {
+    // Dropped from 100, lands on a 4 m obstacle ⇒ falls 96 m down.
+    single(eq, 'dx', { x1: X(100), x2: X(4) }, -96);
+  });
+  it('solves either position from the other and Δx', () => {
+    single(eq, 'x1', { x2: X(4), dx: X(-96) }, 100);
+    single(eq, 'x2', { x1: X(100), dx: X(-96) }, 4);
+  });
+  it('returns null for an unrelated target', () => {
+    nullFor(eq, 'v', base);
+  });
+});
+
 describe('solve() end-to-end', () => {
   it('reproduces the legacy example (v₀, v, a → t, Δx)', () => {
     const result = solve(kinematics1D, { v0: V(-40), v: V(-80), a: A(-9.82) });
 
-    expect(result.unsolved).toEqual([]);
     expect(result.knowns['t']?.value).toBeCloseTo(4.0733, 3);
     expect(result.knowns['dx']?.value).toBeCloseTo(-244.35, 1);
     expect(formatQuantity(result.knowns['t']!, SECOND)).toBe('4.07 s');
+    // Absolute positions are underdetermined from displacement alone.
+    expect(result.unsolved.sort()).toEqual(['x1', 'x2']);
+  });
+
+  it('solves the obstacle problem via two positions (x₁, x₂ → Δx → v)', () => {
+    // Dropped (v₀=0) from 100 m, lands on a 4 m truck.
+    const result = solve(kinematics1D, {
+      v0: V(0),
+      a: A(-9.81),
+      x1: X(100),
+      x2: X(4),
+    });
+    expect(result.knowns['dx']?.value).toBeCloseTo(-96, 6);
+    expect(result.knowns['v']?.value).toBeCloseTo(-43.4, 1);
+    expect(result.unsolved).toEqual([]);
   });
 
   it('picks the physical root and correct signs (v₀, Δx, a → t, v)', () => {

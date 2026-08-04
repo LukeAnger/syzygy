@@ -1,9 +1,15 @@
 /**
  * One-dimensional constant-acceleration kinematics (SUVAT).
  *
- * Five variables — v₀, v, a, t, Δx — related by five equations, each omitting
+ * Core variables — v₀, v, a, t, Δx — related by five equations, each omitting
  * one variable. Given any three knowns the solver derives the rest. Free fall
  * is just this domain with `a` preset to gravity.
+ *
+ * Displacement Δx is modelled as the difference of an initial and final
+ * position (Δx = x₂ − x₁) rather than a single quantity. This matches how
+ * problems are actually stated ("dropped from 100 m, lands on a 4 m truck"):
+ * the parser extracts two positions and the solver computes the displacement,
+ * instead of guessing that any distance is the displacement.
  *
  * Each equation exposes closed forms for every variable it relates, written
  * directly as operations over dimensioned Quantities from the math core. A form
@@ -82,6 +88,20 @@ export const variables: Variable[] = [
     physical: NON_NEGATIVE_TIME,
   },
   {
+    key: 'x1',
+    symbol: 'x₁',
+    latex: 'x_1',
+    dimension: LENGTH,
+    displayUnit: (kit) => kit.length,
+  },
+  {
+    key: 'x2',
+    symbol: 'x₂',
+    latex: 'x_2',
+    dimension: LENGTH,
+    displayUnit: (kit) => kit.length,
+  },
+  {
     key: 'dx',
     symbol: 'Δx',
     latex: '\\Delta x',
@@ -95,6 +115,37 @@ const one = (
   rearrangedLatex: string,
   inputs: VariableKey[],
 ): EquationSolution => ({ roots, rearrangedLatex, inputs });
+
+// Position: Δx = x₂ − x₁   (relates displacement to the two positions)
+const positionEq: Equation = {
+  id: 'position',
+  latex: '\\Delta x = x_2 - x_1',
+  variables: ['dx', 'x1', 'x2'],
+  solveFor(target, k) {
+    switch (target) {
+      case 'dx':
+        return one(
+          [subtract(need(k, 'x2'), need(k, 'x1'))],
+          '\\Delta x = x_2 - x_1',
+          ['x2', 'x1'],
+        );
+      case 'x1':
+        return one(
+          [subtract(need(k, 'x2'), need(k, 'dx'))],
+          'x_1 = x_2 - \\Delta x',
+          ['x2', 'dx'],
+        );
+      case 'x2':
+        return one(
+          [add(need(k, 'x1'), need(k, 'dx'))],
+          'x_2 = x_1 + \\Delta x',
+          ['x1', 'dx'],
+        );
+      default:
+        return null;
+    }
+  },
+};
 
 // Eq1: v = v₀ + a·t   (omits Δx)
 const eq1: Equation = {
@@ -415,7 +466,7 @@ export const kinematics1D: Domain = {
   id: 'kinematics-1d',
   name: '1-D Kinematics',
   variables,
-  equations: [eq1, eq2, eq3, eq4, eq5],
+  equations: [positionEq, eq1, eq2, eq3, eq4, eq5],
 };
 
 /** Acceleration preset for free-fall problems (this domain with `a` = gravity). */
