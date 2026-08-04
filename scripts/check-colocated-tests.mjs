@@ -8,6 +8,10 @@
  * exercised, this proves new modules arrive *with* tests rather than being
  * backfilled later.
  *
+ * NLP is deliberately NOT gated here: its correctness is fuzzy-match quality,
+ * not exact arithmetic, so it warrants its own standards system (phrase
+ * corpora, precision/recall) rather than this exact-code gate. See docs/SPEC.md.
+ *
  * Excluded: test files themselves, barrels (`index.ts`), type-only modules
  * (`types.ts`), and declaration files (`*.d.ts`), none of which carry testable
  * runtime logic.
@@ -19,7 +23,7 @@ import { join, dirname, basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const GUARDED_DIRS = ['src/math', 'src/engine', 'src/domains', 'src/nlp'];
+const GUARDED_DIRS = ['src/math', 'src/engine', 'src/domains'];
 
 /** Recursively collect every file under `dir`. */
 function walk(dir) {

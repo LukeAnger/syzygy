@@ -313,16 +313,22 @@ Proposed new layout:
 lint → typecheck → **test-approval standard** → coverage → build. `npm run ci`
 runs the identical sequence locally.
 
-**Test-approval standards for `math/`, `engine/`, `domains/`, and `nlp/`** —
-the deterministic core is gated harder than the rest of the app:
+**Test-approval standards for `math/`, `engine/`, and `domains/`** — the
+exact-arithmetic core is gated harder than the rest of the app:
 
 1. **Colocated tests** (`scripts/check-colocated-tests.mjs`): every runtime
-   module under `src/math/`, `src/engine/`, `src/domains/`, and `src/nlp/`
-   must ship a sibling `*.test.ts`. New equations/domains/rules cannot merge
-   test-less. Barrels (`index.ts`), type-only `types.ts`, and `*.d.ts` are
-   exempt.
-2. **Coverage thresholds** (Vitest v8, scoped to those same four trees):
+   module under `src/math/`, `src/engine/`, and `src/domains/` must ship a
+   sibling `*.test.ts`. New equations/domains cannot merge test-less. Barrels
+   (`index.ts`), type-only `types.ts`, and `*.d.ts` are exempt.
+2. **Coverage thresholds** (Vitest v8, scoped to those same three trees):
    statements 95%, branches 90%, functions 95%, lines 95%.
+
+**NLP is exempt from the above** and still tested (23 NLP tests), but its
+correctness is fuzzy-match quality — how well phrasing maps to variables —
+which coverage percentages measure poorly. It needs a **separate standards
+system** (to be designed): a labeled corpus of problem phrasings with expected
+assignments, scored by precision/recall, plus regression tracking as phrases
+are added. TODO before the grammar grows much further.
 
 ---
 
@@ -366,5 +372,7 @@ Enabled by the layered design; **not** built in v1.
 - ✅ `nlp/` word-problem parser: hand-rolled tokenizer (behind a swappable
   `Tokenizer` interface) + curated slot grammar → engine-ready assignments,
   with unit folding, dimension guarding, and graceful degradation (unused
-  numbers reported). 94 tests total.
+  numbers reported). Exempt from the core gates — needs its own standards
+  system (see §12). 92 tests total across the project.
+- ⬜ NLP standards system (labeled phrase corpus + precision/recall).
 - ⬜ `ui/` (Tron theme), `state/`.

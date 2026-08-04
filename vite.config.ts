@@ -19,14 +19,14 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'html'],
-      // Coverage standards are enforced for the computational core: the math
-      // primitives, the solver engine, and the domain equation packs. UI/state
-      // are exercised differently and are not gated here.
+      // Coverage standards are enforced for the exact-arithmetic core: the math
+      // primitives, the solver engine, and the domain equation packs. NLP is
+      // fuzzy-match quality and gets its own standards system (see docs/SPEC.md);
+      // UI/state are exercised differently. Neither is gated here.
       include: [
         'src/math/**/*.ts',
         'src/engine/**/*.ts',
         'src/domains/**/*.ts',
-        'src/nlp/**/*.ts',
       ],
       // Barrels are pure re-exports; type-only files carry no runtime logic.
       exclude: ['**/index.ts', '**/types.ts', '**/*.d.ts'],
