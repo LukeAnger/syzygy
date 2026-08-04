@@ -2,13 +2,15 @@
 /**
  * Test-approval standard for the computational core.
  *
- * Every runtime module under `src/math/` and `src/domains/` must ship with a
- * colocated `*.test.ts` file. This is a structural gate that complements the
- * coverage thresholds: coverage proves existing code is exercised, this proves
- * new modules arrive *with* tests rather than being backfilled later.
+ * Every runtime module under `src/math/`, `src/engine/`, and `src/domains/`
+ * must ship with a colocated `*.test.ts` file. This is a structural gate that
+ * complements the coverage thresholds: coverage proves existing code is
+ * exercised, this proves new modules arrive *with* tests rather than being
+ * backfilled later.
  *
- * Excluded: test files themselves, barrels (`index.ts`), and type-only
- * declaration files (`*.d.ts`), none of which carry testable logic.
+ * Excluded: test files themselves, barrels (`index.ts`), type-only modules
+ * (`types.ts`), and declaration files (`*.d.ts`), none of which carry testable
+ * runtime logic.
  *
  * Exits non-zero (failing CI) and lists any module missing its test.
  */
@@ -17,7 +19,7 @@ import { join, dirname, basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const GUARDED_DIRS = ['src/math', 'src/domains'];
+const GUARDED_DIRS = ['src/math', 'src/engine', 'src/domains'];
 
 /** Recursively collect every file under `dir`. */
 function walk(dir) {
@@ -40,6 +42,7 @@ function isGuardedModule(file) {
   if (file.endsWith('.test.ts')) return false;
   if (file.endsWith('.d.ts')) return false;
   if (basename(file) === 'index.ts') return false;
+  if (basename(file) === 'types.ts') return false;
   return true;
 }
 

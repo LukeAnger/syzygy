@@ -355,7 +355,11 @@ Enabled by the layered design; **not** built in v1.
 - ✅ `math/` core built and tested: dimensional `Quantity` arithmetic, real
   metric/imperial units, 3-sig-fig formatting, gravity constant (38 tests).
 - ✅ CI pipeline + test-approval standards (colocated tests + coverage gates)
-  for `math/` and `domains/`.
-- ⬜ `engine/` constraint-propagation solver.
-- ⬜ `domains/kinematics-1d` SUVAT pack.
+  for `math/`, `engine/`, and `domains/`.
+- ✅ `engine/` constraint-propagation solver: auto-solve-all, most-determined
+  root selection (physical-root pruning + recorded discards/alternatives),
+  ordered solution steps.
+- ✅ `domains/kinematics-1d` SUVAT pack: all five equations with closed forms
+  for every variable, free-fall preset. Reproduces the legacy worked examples
+  and resolves signed roots correctly (71 tests total).
 - ⬜ `nlp/`, `ui/` (Tron theme), `state/`.

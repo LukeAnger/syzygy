@@ -19,12 +19,16 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'html'],
-      // Coverage standards are enforced for the computational core only:
-      // the math primitives and the domain equation packs. UI/state are
-      // exercised differently and are not gated here.
-      include: ['src/math/**/*.ts', 'src/domains/**/*.ts'],
+      // Coverage standards are enforced for the computational core: the math
+      // primitives, the solver engine, and the domain equation packs. UI/state
+      // are exercised differently and are not gated here.
+      include: [
+        'src/math/**/*.ts',
+        'src/engine/**/*.ts',
+        'src/domains/**/*.ts',
+      ],
       // Barrels are pure re-exports; type-only files carry no runtime logic.
-      exclude: ['**/index.ts', '**/*.d.ts'],
+      exclude: ['**/index.ts', '**/types.ts', '**/*.d.ts'],
       thresholds: {
         statements: 95,
         branches: 90,
