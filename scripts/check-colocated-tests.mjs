@@ -19,7 +19,7 @@ import { join, dirname, basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const GUARDED_DIRS = ['src/math', 'src/engine', 'src/domains'];
+const GUARDED_DIRS = ['src/math', 'src/engine', 'src/domains', 'src/nlp'];
 
 /** Recursively collect every file under `dir`. */
 function walk(dir) {

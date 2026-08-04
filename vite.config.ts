@@ -26,6 +26,7 @@ export default defineConfig({
         'src/math/**/*.ts',
         'src/engine/**/*.ts',
         'src/domains/**/*.ts',
+        'src/nlp/**/*.ts',
       ],
       // Barrels are pure re-exports; type-only files carry no runtime logic.
       exclude: ['**/index.ts', '**/types.ts', '**/*.d.ts'],

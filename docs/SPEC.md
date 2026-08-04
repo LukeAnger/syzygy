@@ -313,15 +313,16 @@ Proposed new layout:
 lint → typecheck → **test-approval standard** → coverage → build. `npm run ci`
 runs the identical sequence locally.
 
-**Test-approval standards for `math/` and `domains/`** — the computational
-core is gated harder than the rest of the app:
+**Test-approval standards for `math/`, `engine/`, `domains/`, and `nlp/`** —
+the deterministic core is gated harder than the rest of the app:
 
 1. **Colocated tests** (`scripts/check-colocated-tests.mjs`): every runtime
-   module under `src/math/` and `src/domains/` must ship a sibling
-   `*.test.ts`. New equations/domains cannot merge test-less. Barrels
-   (`index.ts`) and `*.d.ts` are exempt.
-2. **Coverage thresholds** (Vitest v8, scoped to `src/math/**` and
-   `src/domains/**`): statements 95%, branches 90%, functions 95%, lines 95%.
+   module under `src/math/`, `src/engine/`, `src/domains/`, and `src/nlp/`
+   must ship a sibling `*.test.ts`. New equations/domains/rules cannot merge
+   test-less. Barrels (`index.ts`), type-only `types.ts`, and `*.d.ts` are
+   exempt.
+2. **Coverage thresholds** (Vitest v8, scoped to those same four trees):
+   statements 95%, branches 90%, functions 95%, lines 95%.
 
 ---
 
@@ -361,5 +362,9 @@ Enabled by the layered design; **not** built in v1.
   ordered solution steps.
 - ✅ `domains/kinematics-1d` SUVAT pack: all five equations with closed forms
   for every variable, free-fall preset. Reproduces the legacy worked examples
-  and resolves signed roots correctly (71 tests total).
-- ⬜ `nlp/`, `ui/` (Tron theme), `state/`.
+  and resolves signed roots correctly.
+- ✅ `nlp/` word-problem parser: hand-rolled tokenizer (behind a swappable
+  `Tokenizer` interface) + curated slot grammar → engine-ready assignments,
+  with unit folding, dimension guarding, and graceful degradation (unused
+  numbers reported). 94 tests total.
+- ⬜ `ui/` (Tron theme), `state/`.
