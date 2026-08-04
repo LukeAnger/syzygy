@@ -25,7 +25,7 @@ interface SpeechRecognitionLike {
 export function Storymode() {
   const [text, setText] = useState('');
   const [listening, setListening] = useState(false);
-  const loadStory = useKinematicsStore((s) => s.loadStory);
+  const submitStory = useKinematicsStore((s) => s.submitStory);
   const unusedNumbers = useKinematicsStore((s) => s.unusedNumbers);
 
   const speech = window as unknown as SpeechWindow;
@@ -34,7 +34,7 @@ export function Storymode() {
 
   const submit = (value: string) => {
     setText(value);
-    loadStory(value);
+    void submitStory(value);
   };
 
   const listen = () => {
@@ -76,10 +76,12 @@ export function Storymode() {
       <button
         type="button"
         className={styles.solve}
-        onClick={() => loadStory(text)}
+        onClick={() => void submitStory(text)}
       >
         Solve
       </button>
+
+      <SmartParseControl />
 
       {unusedNumbers.length > 0 && (
         <p className={styles.warn}>
@@ -107,6 +109,84 @@ export function Storymode() {
       </p>
 
       <Understood />
+      <ShareConsent />
     </section>
+  );
+}
+
+/** Opt-in local-LLM parsing: disclosed, never forced, lazy-loaded. */
+function SmartParseControl() {
+  const status = useKinematicsStore((s) => s.smartStatus);
+  const enabled = useKinematicsStore((s) => s.smartEnabled);
+  const progress = useKinematicsStore((s) => s.smartProgress);
+  const label = useKinematicsStore((s) => s.smartModelLabel);
+  const mb = useKinematicsStore((s) => s.smartModelMB);
+  const enableSmart = useKinematicsStore((s) => s.enableSmart);
+  const disableSmart = useKinematicsStore((s) => s.disableSmart);
+
+  if (status === 'unsupported') {
+    return (
+      <p className={styles.smartNote}>
+        ⚡ Smart parse needs WebGPU (Chrome or Edge on desktop). Using the
+        built-in parser.
+      </p>
+    );
+  }
+
+  return (
+    <div className={styles.smart}>
+      <label className={styles.smartToggle}>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => (e.target.checked ? void enableSmart() : disableSmart())}
+        />
+        ⚡ Smart parse <span className={styles.beta}>beta</span>
+      </label>
+
+      {!enabled && (
+        <p className={styles.smartNote}>
+          Understands trickier wording. One-time ~{mb} MB download ({label}),
+          then runs entirely on your device.
+        </p>
+      )}
+      {enabled && status === 'loading' && (
+        <div className={styles.progressWrap}>
+          <div
+            className={styles.progressBar}
+            style={{ width: `${Math.round(progress * 100)}%` }}
+          />
+          <span className={styles.progressText}>
+            downloading model… {Math.round(progress * 100)}%
+          </span>
+        </div>
+      )}
+      {enabled && status === 'ready' && (
+        <p className={styles.smartReady}>● ready — parsing on your device</p>
+      )}
+      {status === 'error' && (
+        <p className={styles.smartError}>
+          Couldn&apos;t load the model. Using the built-in parser.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Consent to share problem text — only shown when a collector is configured. */
+function ShareConsent() {
+  const configured = useKinematicsStore((s) => s.collectorConfigured);
+  const consent = useKinematicsStore((s) => s.shareConsent);
+  const setConsent = useKinematicsStore((s) => s.setShareConsent);
+  if (!configured) return null;
+  return (
+    <label className={styles.consent}>
+      <input
+        type="checkbox"
+        checked={consent}
+        onChange={(e) => setConsent(e.target.checked)}
+      />
+      Share problem text to improve Syzygy&apos;s parser (open source, anonymous)
+    </label>
   );
 }

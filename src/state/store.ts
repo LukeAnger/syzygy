@@ -16,7 +16,22 @@ import {
 } from '../math/index.ts';
 import { type Knowns, type SolveResult, solve } from '../engine/index.ts';
 import { kinematics1D } from '../domains/kinematics-1d/index.ts';
-import { type Assignment, parse } from '../nlp/index.ts';
+import { type Assignment, type ParseResult, parse } from '../nlp/index.ts';
+import {
+  SMART_MODEL,
+  isSmartParseSupported,
+  smartParse,
+  warmUp,
+} from '../nlp/smart/index.ts';
+import {
+  type CollectorSink,
+  buildRecord,
+  collectorConfigured,
+  httpSink,
+  noopSink,
+  resolveConfig,
+  shouldCollect,
+} from '../telemetry/collector.ts';
 
 /** Every solver variable, including the derived displacement `dx`. */
 export type VariableKey = 'v0' | 'v' | 'a' | 't' | 'x1' | 'x2' | 'dx';
@@ -114,6 +129,47 @@ export type Mode = 'story' | 'manual';
 /** Input keys the current story actually supplied (excludes solver output). */
 export type GivenKeys = InputKey[];
 
+export type SmartStatus = 'unsupported' | 'idle' | 'loading' | 'ready' | 'error';
+
+// Prompt-collection config resolved once at load; disabled unless an endpoint
+// is configured at build time (see docs/SPEC.md).
+const COLLECTOR = resolveConfig(import.meta.env);
+const SINK: CollectorSink = collectorConfigured(COLLECTOR)
+  ? httpSink(COLLECTOR.endpoint!)
+  : noopSink;
+export const COLLECTOR_CONFIGURED = collectorConfigured(COLLECTOR);
+
+/** Build the input/given/story state patch from a parse result. */
+function statePatch(currentAcceleration: string, system: UnitSystem, text: string, result: ParseResult) {
+  const parsed = assignmentsToInputs(result.assignments, system);
+  // "Falls to the ground": start position given but no final one ⇒ x₂ = 0.
+  if (parsed.x1 !== undefined && parsed.x2 === undefined) parsed.x2 = '0';
+  return {
+    story: text,
+    given: Object.keys(parsed) as GivenKeys,
+    unusedNumbers: result.unusedNumbers,
+    inputs: { ...DEFAULT_INPUTS, a: currentAcceleration, ...parsed },
+  };
+}
+
+/** Send an anonymized record to the collector, if consented and in-policy. */
+function maybeCollect(
+  text: string,
+  result: ParseResult,
+  engine: 'rule' | 'smart',
+  consent: boolean,
+) {
+  if (!consent || !COLLECTOR_CONFIGURED) return;
+  const record = buildRecord({
+    prompt: text,
+    engine,
+    variables: result.assignments.map((a) => a.variable),
+    unusedNumbers: result.unusedNumbers,
+    ts: Date.now(),
+  });
+  if (shouldCollect(record, COLLECTOR.policy)) SINK.send(record);
+}
+
 export interface KinematicsState {
   mode: Mode;
   inputs: Inputs;
@@ -124,10 +180,24 @@ export interface KinematicsState {
   given: GivenKeys;
   /** Numbers the parser could not place, surfaced from the last parse. */
   unusedNumbers: number[];
+  /** Opt-in local-LLM parsing. */
+  smartEnabled: boolean;
+  smartStatus: SmartStatus;
+  smartProgress: number;
+  smartModelLabel: string;
+  smartModelMB: number;
+  /** Consent to share problem text to improve the parser. */
+  shareConsent: boolean;
+  collectorConfigured: boolean;
   setMode(mode: Mode): void;
   setInput(key: InputKey, value: string): void;
   setUnitSystem(system: UnitSystem): void;
+  /** Parse with whichever engine is active (rule, or smart when ready). */
+  submitStory(text: string): Promise<void>;
   loadStory(text: string): void;
+  enableSmart(): Promise<void>;
+  disableSmart(): void;
+  setShareConsent(consent: boolean): void;
   loadFreeFall(): void;
   reset(): void;
 }
@@ -139,6 +209,13 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   story: '',
   given: [],
   unusedNumbers: [],
+  smartEnabled: false,
+  smartStatus: isSmartParseSupported() ? 'idle' : 'unsupported',
+  smartProgress: 0,
+  smartModelLabel: SMART_MODEL.label,
+  smartModelMB: SMART_MODEL.approxMB,
+  shareConsent: false,
+  collectorConfigured: COLLECTOR_CONFIGURED,
 
   setMode: (mode) => set({ mode }),
 
@@ -152,19 +229,50 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
     })),
 
   loadStory: (text) => {
+    const state = get();
     const result = parse(text);
-    const parsed = assignmentsToInputs(result.assignments, get().unitSystem);
-    // "Falls to the ground": if a starting position is given but no final one,
-    // assume the object lands at x₂ = 0 so the problem is fully determined.
-    if (parsed.x1 !== undefined && parsed.x2 === undefined) parsed.x2 = '0';
-    set((state) => ({
-      story: text,
-      given: Object.keys(parsed) as GivenKeys,
-      unusedNumbers: result.unusedNumbers,
-      // Keep the current acceleration (free-fall default) unless the story set it.
-      inputs: { ...DEFAULT_INPUTS, a: state.inputs.a, ...parsed },
-    }));
+    set(statePatch(state.inputs.a, state.unitSystem, text, result));
+    maybeCollect(text, result, 'rule', state.shareConsent);
   },
+
+  submitStory: async (text) => {
+    const state = get();
+    if (state.smartEnabled && state.smartStatus === 'ready') {
+      try {
+        const result = await smartParse(text, state.unitSystem);
+        if (result) {
+          set(statePatch(get().inputs.a, state.unitSystem, text, result));
+          maybeCollect(text, result, 'smart', get().shareConsent);
+          return;
+        }
+      } catch {
+        /* fall through to the always-available rule parser */
+      }
+    }
+    get().loadStory(text);
+  },
+
+  enableSmart: async () => {
+    if (!isSmartParseSupported()) {
+      set({ smartStatus: 'unsupported' });
+      return;
+    }
+    set({ smartEnabled: true, smartStatus: 'loading', smartProgress: 0 });
+    try {
+      await warmUp((fraction) => set({ smartProgress: fraction }));
+      set({ smartStatus: 'ready', smartProgress: 1 });
+    } catch {
+      set({ smartStatus: 'error', smartEnabled: false });
+    }
+  },
+
+  disableSmart: () =>
+    set({
+      smartEnabled: false,
+      smartStatus: isSmartParseSupported() ? 'idle' : 'unsupported',
+    }),
+
+  setShareConsent: (consent) => set({ shareConsent: consent }),
 
   loadFreeFall: () =>
     set((state) => ({ inputs: { ...state.inputs, a: DEFAULT_INPUTS.a } })),

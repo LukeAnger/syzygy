@@ -341,6 +341,43 @@ are added. TODO before the grammar grows much further.
 
 ---
 
+## 12a. Local LLM parsing & the prompt flywheel
+
+Two additions turn NLP from "rules only" into a self-improving system, without
+a server and without betraying the no-key / no-cost / static constraints.
+
+**Smart parse (opt-in, `src/nlp/smart/`)** — a local LLM via WebLLM (WebGPU),
+running entirely in the browser:
+- The model *only* extracts variables into the shared `ParseResult`; the
+  deterministic engine still does every calculation. The LLM never touches the
+  math, so "LLMs are bad at arithmetic" never applies.
+- **Never forced.** Off by default; a disclosed toggle states the one-time
+  download size and that it runs on-device. Weights (and the ~14 MB WebLLM
+  runtime) load only on opt-in — `@mlc-ai/web-llm` is dynamically imported, so
+  the base bundle is unchanged (entry stays ~207 KB gzipped; WebLLM is a
+  separate ~6 MB lazy chunk).
+- **Graceful fallback.** No WebGPU, model still loading, or unusable output ⇒
+  the always-available rule parser. The rule parser is the baseline; smart parse
+  is an enhancement.
+- Smallest usable model by default (`SmolLM2-360M`, ~380 MB, q4f16); one-line
+  swap. The pure JSON→assignment mapping is unit-tested; on-device inference
+  quality must be validated on real hardware (no GPU in CI).
+
+**Prompt collection (`src/telemetry/collector.ts`)** — the flywheel that
+improves the *free* rule parser:
+- Storymode submissions (by default only the ones the rule parser couldn't
+  fully place — the highest-signal data) are recorded and POSTed to an ingest
+  endpoint, to be stored (e.g. S3) and batch-processed by a model that proposes
+  new grammar rules. That downstream pipeline is out of the static app's scope.
+- **Privacy: doubly gated and off by default.** Nothing is sent unless BOTH a
+  build-time endpoint is configured AND the user gives runtime consent. Records
+  are anonymized (problem text + how it parsed; no identifiers).
+- Config via env: `VITE_COLLECTOR_ENDPOINT` (unset ⇒ disabled),
+  `VITE_COLLECTOR_POLICY` = `failures` (default) | `all` | `off`.
+
+**Business fit:** the app is open-source; smart parse is the natural paid/opt-in
+premium capability, while collection makes the free path better for everyone.
+
 ## 13. Roadmap / future scope
 
 Enabled by the layered design; **not** built in v1.
@@ -388,6 +425,11 @@ Enabled by the layered design; **not** built in v1.
   Storymode text/voice input → parser, KaTeX worked-solution steps, dual-axis
   motion chart. Tron / low-poly theme via design tokens. Verified end-to-end in
   a browser.
-- ⬜ NLP standards system (labeled phrase corpus + precision/recall).
+- ✅ Local LLM "smart parse" (WebLLM, opt-in, lazy-loaded, rule-parser
+  fallback) + prompt-collection flywheel (consent-gated, endpoint via env).
+  Pure glue unit-tested; on-device inference validated on real hardware.
+- ⬜ NLP standards system (labeled phrase corpus + precision/recall) — the
+  collected prompts feed this.
+- ⬜ Ingest endpoint + batch rule-suggestion pipeline (out of static-app scope).
 - ⬜ Polish: bundle code-splitting (chart.js/KaTeX are heavy), interactive
   (Socratic) tutor phase, additional domains.

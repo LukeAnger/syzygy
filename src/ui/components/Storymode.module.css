@@ -110,3 +110,96 @@
   font-size: 0.74rem;
   color: var(--danger);
 }
+
+.smart {
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.smartToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.smartToggle input {
+  accent-color: var(--accent);
+}
+
+.beta {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--accent-2);
+  padding: 0.05rem 0.3rem;
+  border-radius: 2px;
+}
+
+.smartNote {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.smartReady {
+  margin: 0.4rem 0 0;
+  font-size: 0.74rem;
+  color: var(--good);
+  font-family: var(--font-mono);
+}
+
+.smartError {
+  margin: 0.4rem 0 0;
+  font-size: 0.74rem;
+  color: var(--danger);
+}
+
+.progressWrap {
+  position: relative;
+  margin-top: 0.5rem;
+  height: 1.1rem;
+  background: #05090d;
+  border: 1px solid var(--panel-edge);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  transition: width 0.2s;
+}
+
+.progressText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-bright);
+}
+
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin-top: 0.9rem;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.consent input {
+  margin-top: 0.15rem;
+  accent-color: var(--accent);
+}
