@@ -110,9 +110,9 @@ changes**.
 Fully client-side, deterministic, testable. Regex was a throwaway prototype;
 this replaces it.
 
-- **Tokenizer:** `compromise` for tokenizing and number/unit extraction, kept
-  behind a `Tokenizer` interface so it can be swapped for a hand-rolled
-  tokenizer later without touching the grammar.
+- **Tokenizer:** a hand-rolled tokenizer (number/unit extraction) behind a
+  `Tokenizer` interface — zero external NLP dependency, fully in-house, and the
+  interface keeps it swappable if a richer library is ever wanted.
 - **Slot-grammar:** curated intent patterns map matched phrases to variable
   slots (see §7). Numbers + units become `Quantity`s.
 - **Graceful degradation:** the manual variable form is the **ground truth**.
@@ -217,8 +217,10 @@ tokenization/number extraction; the pattern→slot mapping is ours.
 ## 8. Units & formatting
 
 - Metric and imperial are **real** conversions through `math/`, not labels.
-- Sig-fig-aware output formatting (configurable precision; default 2 decimals to
-  match current behavior).
+- Sig-fig-aware output formatting: **3 significant figures by default**
+  (physics-textbook convention), configurable per call. Significant figures,
+  not decimal places, so precision reads sensibly across magnitudes. Trailing
+  zeros that convey precision are kept unless explicitly trimmed.
 - Dimensional mismatches are surfaced as friendly errors, not NaN.
 
 ---
@@ -325,10 +327,19 @@ Enabled by the layered design; **not** built in v1.
 
 ---
 
-## 14. Open questions
+## 14. Resolved decisions
 
-- Confirm the `compromise` dependency vs. a fully hand-rolled tokenizer (current
-  default: `compromise`, isolated behind an interface so it's swappable).
-- Sig-fig / precision policy per variable (default 2 dp for now).
-- Whether the free-fall preset ships as the default landing state or one of
-  several presets.
+- **NLP:** hand-rolled tokenizer behind a `Tokenizer` interface — no external
+  NLP dependency, swappable later.
+- **Sig figs:** 3 significant figures by default, configurable.
+- **Free fall** is the default landing preset (`a = −9.81 m/s²`).
+
+## 15. Status
+
+- ✅ Vite + TypeScript scaffold at root; legacy app preserved under `legacy/`
+  and tagged `v1-legacy`.
+- ✅ `math/` core built and tested: dimensional `Quantity` arithmetic, real
+  metric/imperial units, 3-sig-fig formatting, gravity constant (37 tests).
+- ⬜ `engine/` constraint-propagation solver.
+- ⬜ `domains/kinematics-1d` SUVAT pack.
+- ⬜ `nlp/`, `ui/` (Tron theme), `state/`.
