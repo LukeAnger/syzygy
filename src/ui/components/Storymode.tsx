@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useKinematicsStore } from '../../state/index.ts';
+import { Understood } from './Understood.tsx';
 import styles from './Storymode.module.css';
 
 const EXAMPLES = [
@@ -69,7 +70,7 @@ export function Storymode() {
       <textarea
         className={styles.textarea}
         value={text}
-        placeholder="Describe a free-fall problem in plain English…"
+        placeholder="e.g. “A ball is dropped from a height of 45 m” — then hit Solve"
         onChange={(e) => setText(e.target.value)}
       />
       <button
@@ -77,12 +78,13 @@ export function Storymode() {
         className={styles.solve}
         onClick={() => loadStory(text)}
       >
-        Parse problem
+        Solve
       </button>
 
       {unusedNumbers.length > 0 && (
         <p className={styles.warn}>
-          Couldn&apos;t place: {unusedNumbers.join(', ')} — check the form.
+          Couldn&apos;t place: {unusedNumbers.join(', ')} — try rephrasing, or
+          adjust manually below.
         </p>
       )}
 
@@ -103,6 +105,8 @@ export function Storymode() {
           </span>
         ))}
       </p>
+
+      <Understood />
     </section>
   );
 }

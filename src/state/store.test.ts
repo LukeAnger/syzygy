@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_INPUTS,
   assignmentsToInputs,
   buildKnowns,
   convertInputs,
   solveInputs,
+  useKinematicsStore,
 } from './store.ts';
 import { VELOCITY, quantity } from '../math/index.ts';
 
@@ -66,5 +67,41 @@ describe('convertInputs', () => {
   it('is a no-op when the system is unchanged', () => {
     const inputs = { ...DEFAULT_INPUTS, v0: '5' };
     expect(convertInputs(inputs, 'metric', 'metric')).toBe(inputs);
+  });
+});
+
+describe('store: Storymode is self-contained', () => {
+  beforeEach(() => useKinematicsStore.getState().reset());
+
+  it('defaults to story mode', () => {
+    expect(useKinematicsStore.getState().mode).toBe('story');
+  });
+
+  it('loadStory fills inputs and records what was understood', () => {
+    useKinematicsStore.getState().loadStory('dropped from a height of 45 m');
+    const state = useKinematicsStore.getState();
+
+    expect(state.story).toBe('dropped from a height of 45 m');
+    expect(state.inputs.v0).toBe('0');
+    expect(state.inputs.dx).toBe('-45');
+    expect(state.given.sort()).toEqual(['dx', 'v0']);
+    // The story alone is enough to solve — no manual entry needed.
+    const result = solveInputs(state.inputs, state.unitSystem);
+    expect(result.unsolved).toEqual([]);
+  });
+
+  it('reports numbers it could not place', () => {
+    useKinematicsStore.getState().loadStory('a dinosaur eats 5 cookies');
+    expect(useKinematicsStore.getState().unusedNumbers).toEqual([5]);
+    expect(useKinematicsStore.getState().given).toEqual([]);
+  });
+
+  it('reset clears the story back to defaults', () => {
+    useKinematicsStore.getState().loadStory('dropped from 45 m');
+    useKinematicsStore.getState().reset();
+    const state = useKinematicsStore.getState();
+    expect(state.story).toBe('');
+    expect(state.given).toEqual([]);
+    expect(state.inputs).toEqual(DEFAULT_INPUTS);
   });
 });

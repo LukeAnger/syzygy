@@ -104,13 +104,22 @@ export function convertInputs(
   return next;
 }
 
+export type Mode = 'story' | 'manual';
+
+/** Variable keys the current story actually supplied (excludes solver output). */
+export type GivenKeys = VariableKey[];
+
 export interface KinematicsState {
+  mode: Mode;
   inputs: Inputs;
   unitSystem: UnitSystem;
   /** Last Storymode text, for display/highlighting. */
   story: string;
+  /** Variables the story provided (what the parser understood). */
+  given: GivenKeys;
   /** Numbers the parser could not place, surfaced from the last parse. */
   unusedNumbers: number[];
+  setMode(mode: Mode): void;
   setInput(key: VariableKey, value: string): void;
   setUnitSystem(system: UnitSystem): void;
   loadStory(text: string): void;
@@ -119,10 +128,14 @@ export interface KinematicsState {
 }
 
 export const useKinematicsStore = create<KinematicsState>((set, get) => ({
+  mode: 'story',
   inputs: DEFAULT_INPUTS,
   unitSystem: 'metric',
   story: '',
+  given: [],
   unusedNumbers: [],
+
+  setMode: (mode) => set({ mode }),
 
   setInput: (key, value) =>
     set((state) => ({ inputs: { ...state.inputs, [key]: value } })),
@@ -138,6 +151,7 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
     const parsed = assignmentsToInputs(result.assignments, get().unitSystem);
     set((state) => ({
       story: text,
+      given: Object.keys(parsed) as GivenKeys,
       unusedNumbers: result.unusedNumbers,
       // Keep the current acceleration (free-fall default) unless the story set it.
       inputs: { ...DEFAULT_INPUTS, a: state.inputs.a, ...parsed },
@@ -147,5 +161,6 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   loadFreeFall: () =>
     set((state) => ({ inputs: { ...state.inputs, a: DEFAULT_INPUTS.a } })),
 
-  reset: () => set({ inputs: DEFAULT_INPUTS, story: '', unusedNumbers: [] }),
+  reset: () =>
+    set({ inputs: DEFAULT_INPUTS, story: '', given: [], unusedNumbers: [] }),
 }));
