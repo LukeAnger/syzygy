@@ -23,6 +23,7 @@
     "ci": "npm run lint && npm run typecheck && npm run test:structure && npm run test:coverage && npm run build",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
+    "corpus:generate": "node tools/corpus-gen/generate.mjs",
     "deploy": "npm run build && npm run deploy:assets && npm run deploy:html && npm run deploy:invalidate",
     "deploy:assets": "aws s3 sync dist/assets/ s3://lukeanger.com/syzygy/assets/ --delete --cache-control \"public,max-age=31536000,immutable\"",
     "deploy:html": "aws s3 sync dist/ s3://lukeanger.com/syzygy/ --exclude \"assets/*\" --cache-control \"no-cache\"",

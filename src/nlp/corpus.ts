@@ -45,6 +45,14 @@ export interface CorpusCase {
    * confident wrong answer.
    */
   absent?: VariableKey[];
+  /**
+   * Numbers in the text that belong to no slot at all — a mass, a headcount, a
+   * price. A parser adopting one has fabricated a value from noise, which is
+   * the failure mode that turns "not enough information" into a confident wrong
+   * answer. Scoring it makes fabrication a measured rate rather than something
+   * spotted by eye.
+   */
+  distractors?: number[];
   /** What this case is designed to probe. */
   probes: string;
 }
@@ -150,6 +158,8 @@ export interface CaseScore {
   wrong: VariableKey[];
   /** Slots required to stay empty that the parser filled anyway. */
   fabricated: VariableKey[];
+  /** Slots that adopted a number belonging to no quantity in the problem. */
+  adoptedDistractors: VariableKey[];
 }
 
 /** Values agree if they match to within floating-point noise. */
@@ -176,6 +186,7 @@ export function scoreCase(
     missed: [],
     wrong: [],
     fabricated: [],
+    adoptedDistractors: [],
   };
 
   for (const [key, label] of Object.entries(entry.expected)) {
@@ -191,8 +202,33 @@ export function scoreCase(
   for (const variable of entry.absent ?? []) {
     if (actual.has(variable)) score.fabricated.push(variable);
   }
+
+  // Compared by magnitude and in SI, since a distractor could be adopted into
+  // any slot and with either sign. A value that also matches a genuine label is
+  // never counted: the two readings are indistinguishable, so blaming the
+  // parser would be guesswork.
+  const legitimate = Object.values(entry.expected)
+    .filter((label): label is [number, Unit] => Boolean(label))
+    .map((label) => Math.abs(fromUnit(label[0], label[1]).value));
+  for (const [variable, value] of actual) {
+    const magnitude = Math.abs(value);
+    if (legitimate.some((known) => agrees(magnitude, known))) continue;
+    const adopted = (entry.distractors ?? []).some((d) =>
+      SI_EQUIVALENTS(d).some((si) => agrees(magnitude, si)),
+    );
+    if (adopted) score.adoptedDistractors.push(variable);
+  }
   return score;
 }
+
+/**
+ * A distractor is written without units ("2.5 kg", "28 students"), so the
+ * number itself is what a parser would misread — but it lands in a slot whose
+ * value is stored in SI. For metric lengths and all times those coincide; for
+ * an imperial reading the same digits become feet or feet per second, so both
+ * interpretations are checked before calling it adopted.
+ */
+const SI_EQUIVALENTS = (value: number): number[] => [value, value * 0.3048];
 
 /** Corpus-wide totals. Recall is over labeled slots only. */
 export function summarize(scores: CaseScore[]) {
@@ -205,6 +241,7 @@ export function summarize(scores: CaseScore[]) {
     labeled,
     wrong: total((s) => s.wrong),
     fabricated: total((s) => s.fabricated),
+    adoptedDistractors: total((s) => s.adoptedDistractors),
     recall: labeled === 0 ? 0 : recovered / labeled,
   };
 }
