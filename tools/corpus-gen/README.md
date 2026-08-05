@@ -54,14 +54,18 @@ breadth — the aggregate hides *which* phrasings are unreachable. At the time o
 writing:
 
 ```
-synthetic: 1955/5048 labeled slots (recall 39%) over 1200 cases
+synthetic: 2439/5048 labeled slots (recall 48%) over 1200 cases
   a:  0/1200   (0%)    grammar never emits acceleration; the app supplies it
   t:  323/488  (66%)
-  v:  0/245    (0%)    no impact-speed phrasing in the bank is recognised
-  v0: 567/1200 (47%)
+  v:  190/245  (78%)
+  v0: 861/1200 (72%)
   x1: 586/967  (61%)
   x2: 479/948  (51%)
 ```
+
+The first run scored 39%, with `v` at 0/245 and 32 cases answered with a wrong
+value. Both were real defects the corpus surfaced, and both are now fixed — see
+the git history for what changed. `x1` and `x2` are the standing gaps.
 
 Three assertions guard quality, and two of them only move in one direction:
 

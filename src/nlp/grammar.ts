@@ -254,6 +254,67 @@ const velocity = (sign: Sign, requireExplicitUnit = false): SlotSpec => ({
 });
 
 export const RULES: Rule[] = [
+  numberRule(
+    'v0-up',
+    'thrown upward at N',
+    [
+      ['thrown', 'upward', 'at'],
+      ['thrown', 'up', 'at'],
+      ['thrown', 'upwards', 'at'],
+      ['launched', 'upward', 'at'],
+      ['projected', 'upward', 'at'],
+      ['upward', 'at'],
+      // Release phrased as leaving the thrower rather than as a direction.
+      ['leaves', 'her', 'hand', 'at'],
+      ['leaves', 'his', 'hand', 'at'],
+      ['leaves', 'their', 'hand', 'at'],
+      ['leaves', 'the', 'hand', 'at'],
+      ['leaves', 'her', 'hand', 'travelling', 'at'],
+      ['leaves', 'his', 'hand', 'travelling', 'at'],
+      // Kept short so they generalize past the exact sentence that exposed the
+      // gap: "straight up at" covers thrown/hurled/tossed/kicked alike.
+      ['straight', 'up', 'at'],
+      ['skyward', 'at'],
+      ['upward', 'with', 'a', 'speed', 'of'],
+      ['upward', 'with', 'a', 'velocity', 'of'],
+      ['initial', 'upward', 'speed', 'of'],
+      ['initial', 'upward', 'velocity', 'of'],
+      ['moving', 'upward', 'at'],
+    ],
+    velocity('positive'),
+  ),
+  numberRule(
+    'v0-down',
+    'thrown downward at N',
+    [
+      ['thrown', 'downward', 'at'],
+      ['thrown', 'down', 'at'],
+      ['thrown', 'downwards', 'at'],
+      ['downward', 'at'],
+      ['straight', 'down', 'at'],
+      ['downward', 'with', 'a', 'speed', 'of'],
+      ['downward', 'with', 'a', 'velocity', 'of'],
+      ['initial', 'downward', 'speed', 'of'],
+      ['initial', 'downward', 'velocity', 'of'],
+      ['already', 'falling', 'at'],
+      ['still', 'falling', 'at'],
+    ],
+    velocity('negative'),
+  ),
+  numberRule(
+    'v0-initial',
+    'initial velocity of N',
+    [
+      ['initial', 'velocity', 'of'],
+      ['initial', 'speed', 'of'],
+      ['with', 'an', 'initial', 'velocity', 'of'],
+    ],
+    { variable: 'v0', dimension: VELOCITY, defaultUnit: METRE_PER_SECOND, sign: 'signed' },
+  ),
+  // Ordered AFTER the velocity rules on purpose: the parser keeps the first
+  // match per variable, so listing this first made "released" beat a stated
+  // speed. "With an initial upward speed of 23 ft/s, the ice is released"
+  // came back as v0 = 0 — confidently wrong, where silence is recoverable.
   // Verbs that mean "it started at rest" without saying so. Prose reaches for
   // these far more often than "from rest": things slip, topple and break loose.
   flagRule(
@@ -281,47 +342,6 @@ export const RULES: Rule[] = [
     quantity(0, VELOCITY),
   ),
   numberRule(
-    'v0-up',
-    'thrown upward at N',
-    [
-      ['thrown', 'upward', 'at'],
-      ['thrown', 'up', 'at'],
-      ['thrown', 'upwards', 'at'],
-      ['launched', 'upward', 'at'],
-      ['projected', 'upward', 'at'],
-      ['upward', 'at'],
-      // Release phrased as leaving the thrower rather than as a direction.
-      ['leaves', 'her', 'hand', 'at'],
-      ['leaves', 'his', 'hand', 'at'],
-      ['leaves', 'their', 'hand', 'at'],
-      ['leaves', 'the', 'hand', 'at'],
-      ['leaves', 'her', 'hand', 'travelling', 'at'],
-      ['leaves', 'his', 'hand', 'travelling', 'at'],
-    ],
-    velocity('positive'),
-  ),
-  numberRule(
-    'v0-down',
-    'thrown downward at N',
-    [
-      ['thrown', 'downward', 'at'],
-      ['thrown', 'down', 'at'],
-      ['thrown', 'downwards', 'at'],
-      ['downward', 'at'],
-    ],
-    velocity('negative'),
-  ),
-  numberRule(
-    'v0-initial',
-    'initial velocity of N',
-    [
-      ['initial', 'velocity', 'of'],
-      ['initial', 'speed', 'of'],
-      ['with', 'an', 'initial', 'velocity', 'of'],
-    ],
-    { variable: 'v0', dimension: VELOCITY, defaultUnit: METRE_PER_SECOND, sign: 'signed' },
-  ),
-  numberRule(
     'v-impact',
     'final velocity at impact',
     [
@@ -331,6 +351,17 @@ export const RULES: Rule[] = [
       ['impacts', 'the', 'ground', 'at'],
       ['reaches', 'the', 'ground', 'at'],
       ['hits', 'the', 'ground', 'with', 'a', 'speed', 'of'],
+      // Arrival phrased without naming the surface. The corpus scored v at
+      // 0/245 before these: a whole category of standard wording the grammar
+      // simply could not reach.
+      ['arrives', 'at'],
+      ['arrives', 'travelling', 'at'],
+      ['arrives', 'traveling', 'at'],
+      ['arriving', 'at'],
+      ['impact', 'speed', 'is'],
+      ['speed', 'just', 'before', 'landing', 'is'],
+      ['speed', 'on', 'impact', 'is'],
+      ['final', 'speed', 'of'],
       // Impact against a named surface rather than "the ground", optionally
       // with a movement participle between the surface and the speed.
       ...['pavement', 'floor', 'street', 'lawn', 'grass', 'roof', 'water'].flatMap(

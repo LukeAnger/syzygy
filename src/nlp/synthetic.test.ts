@@ -68,11 +68,12 @@ describe('synthetic corpus', () => {
      * A wrong value is worse than a missing one, so this is capped rather than
      * floored — and the cap only moves down.
      *
-     * The cases behind it are a real finding, not noise. The grammar treats
-     * "released" as "from rest", so *"with an initial upward speed of 23 ft/s,
-     * a chunk of ice is released"* comes back as v0 = 0 — confidently wrong,
-     * where staying silent would have been recoverable. Fixing it means making
-     * the rest rule yield when a velocity is stated nearby.
+     * Was 32 on the first run, all one defect the corpus found: the grammar
+     * read "released" as "from rest", so *"with an initial upward speed of
+     * 23 ft/s, a chunk of ice is released"* came back as v0 = 0 — confidently
+     * wrong, where silence is recoverable. Fixed by ordering the rest rule
+     * after the velocity rules, since the parser keeps the first match per
+     * variable and a stated speed should always win over an implied one.
      */
     it('does not exceed its recorded wrong-value count', () => {
       const offenders = scores.filter((s) => s.wrong.length > 0);
@@ -129,10 +130,10 @@ describe('synthetic corpus', () => {
  * it most likely means someone sourced phrasings from `grammar.ts`, and the
  * corpus has quietly become a mirror.
  */
-const SYNTHETIC_FLOOR = 0.38;
+const SYNTHETIC_FLOOR = 0.48;
 
 /**
  * Cases the grammar answers with a wrong value rather than none. Only ever
  * lower this — it is a defect count, not a budget.
  */
-const WRONG_VALUE_CEILING = 32;
+const WRONG_VALUE_CEILING = 0;
