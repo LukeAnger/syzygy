@@ -92,3 +92,152 @@
   font-size: 0.76rem;
   color: var(--accent-2);
 }
+
+/* The answer to the question actually asked, ahead of the supporting work. */
+.asked {
+  margin-bottom: 1.4rem;
+  padding: 0.9rem 1rem;
+  border: var(--edge);
+  border-left: 2px solid var(--good);
+  border-radius: var(--radius);
+  background: rgba(56, 249, 176, 0.04);
+}
+
+.askedLabel {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.45rem;
+}
+
+.answer {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  color: var(--good);
+  text-shadow: 0 0 10px rgba(56, 249, 176, 0.35);
+}
+
+.answerMissing {
+  font-size: 0.85rem;
+  color: var(--accent-2);
+}
+
+/* Values the story supplied that the answer never depended on. */
+.unnecessary {
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--panel-edge);
+  font-size: 0.76rem;
+  color: var(--text-dim);
+}
+
+.workingLabel {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.6rem;
+}
+
+/* One block per motion segment. The grouping is the explanation: the answer
+   visibly comes from the last phase, which is what makes an earlier height
+   irrelevant rather than merely unused. */
+.phase {
+  margin-bottom: 1.4rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--accent-2-dim);
+}
+
+.phaseHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+.phaseSpan {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-dim);
+}
+
+/* A segment the answer does not depend on: collapsed, explained, still there
+   for a student who wants to check it. */
+.skipped {
+  margin-bottom: 1.4rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px dashed var(--panel-edge);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.skippedHead {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.skippedTag {
+  margin-left: auto;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+
+/* Only the arithmetic of a skipped stage folds away — the reason above it
+   stays visible, because that is the part worth reading. */
+.working {
+  margin-top: 0.2rem;
+}
+
+.workingToggle {
+  display: list-item;
+  list-style-position: inside;
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+
+.workingToggle::marker {
+  color: var(--text-dim);
+}
+
+.workingToggle:hover {
+  text-decoration: underline;
+}
+
+/* The boundary condition between two segments, stated as equations. This is
+   where the reasoning lives: v₀ = 0 has no v on the right, so nothing about
+   the previous stage's speed can cross it. */
+.boundary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  margin: -0.6rem 0 1.3rem 0.9rem;
+  padding: 0.4rem 0.9rem;
+  border-left: 2px dashed var(--panel-edge);
+  color: var(--text-dim);
+}
+
+.boundaryLabel {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}

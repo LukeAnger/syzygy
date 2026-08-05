@@ -3,3 +3,5 @@ export * from './types.ts';
 export * from './tokenizer.ts';
 export * from './grammar.ts';
 export * from './parse.ts';
+export * from './question.ts';
+export * from './segment.ts';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LENGTH, TIME, VELOCITY, dimensionsEqual } from '../math/index.ts';
-import { RULES } from './grammar.ts';
+import { RULES, measuredNumbers } from './grammar.ts';
 import { defaultTokenizer } from './tokenizer.ts';
 import type { SlotMatch } from './types.ts';
 
@@ -76,5 +76,29 @@ describe('dimension guarding', () => {
   it('ignores a number whose explicit unit is the wrong dimension', () => {
     // "in 45 m" must not be read as 45 seconds.
     expect(firstFor('in 45 m', 't')).toBeUndefined();
+  });
+});
+
+describe('measuredNumbers', () => {
+  const measure = (input: string) =>
+    measuredNumbers(defaultTokenizer.tokenize(input));
+
+  it('tags each number with the dimension of its unit', () => {
+    const measured = measure('falls 45 m in 3 s at 20 m/s');
+    expect(measured.map((m) => m.value)).toEqual([45, 3, 20]);
+    expect(dimensionsEqual(measured[0]!.dimension!, LENGTH)).toBe(true);
+    expect(dimensionsEqual(measured[1]!.dimension!, TIME)).toBe(true);
+    expect(dimensionsEqual(measured[2]!.dimension!, VELOCITY)).toBe(true);
+  });
+
+  it('leaves a bare number undimensioned', () => {
+    const measured = measure('attended by 32 students');
+    expect(measured).toEqual([{ value: 32 }]);
+  });
+
+  it('folds imperial spellings before tagging', () => {
+    const measured = measure('some 40 feet above the lawn');
+    expect(measured[0]!.value).toBe(40);
+    expect(dimensionsEqual(measured[0]!.dimension!, LENGTH)).toBe(true);
   });
 });

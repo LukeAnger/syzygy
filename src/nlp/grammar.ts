@@ -27,11 +27,13 @@ import {
   type Dimension,
   type Unit,
 } from '../math/index.ts';
+import type { UnitSystem } from '../math/index.ts';
 import type { VariableKey } from '../engine/index.ts';
 import type { Rule, SlotMatch, Token } from './types.ts';
+import { defaultTokenizer } from './tokenizer.ts';
 
 /** Canonical unit tokens the tokenizer produces → their Unit. */
-const UNITS: Record<string, Unit> = {
+export const UNITS: Record<string, Unit> = {
   m: METRE,
   ft: FOOT,
   s: SECOND,
@@ -73,6 +75,65 @@ function nextNumber(
     }
   }
   return null;
+}
+
+/** Canonical unit tokens the tokenizer emits, grouped by system. */
+const SYSTEM_TOKENS: Record<UnitSystem, string[]> = {
+  imperial: ['ft', 'ft/s', 'ft/s2'],
+  metric: ['m', 'm/s', 'm/s2'],
+};
+
+/**
+ * The unit system a story is written in, or null when its own units don't say.
+ *
+ * The tokenizer folds "feet"/"foot"/"ft" into one token, so this is a
+ * deterministic fact about the text rather than an inference — which is why it
+ * outranks a model's guess about units, and why the app switches its display
+ * system to match. A story mixing systems returns null instead of picking one.
+ */
+export function detectSystem(text: string): UnitSystem | null {
+  const words = new Set(
+    defaultTokenizer
+      .tokenize(text)
+      .filter((token) => token.kind === 'word')
+      .map((token) => token.text),
+  );
+  const imperial = SYSTEM_TOKENS.imperial.some((unit) => words.has(unit));
+  const metric = SYSTEM_TOKENS.metric.some((unit) => words.has(unit));
+  if (imperial === metric) return null;
+  return imperial ? 'imperial' : 'metric';
+}
+
+/** A number from the text, with the dimension of any unit written next to it. */
+export interface MeasuredNumber {
+  readonly value: number;
+  /** Absent when the number carries no unit ("32 students"). */
+  readonly dimension?: Dimension;
+}
+
+/**
+ * Every number in the token stream, tagged with the dimension of the unit that
+ * follows it.
+ *
+ * The grammar already refuses a number whose unit contradicts the slot it is
+ * matching (see `numberRule`). Exposing that same fact lets smart parse be held
+ * to it too: "30 m/s" can only ever be a velocity, whatever a model claims
+ * about it. Without this the model is free to file a speed under acceleration,
+ * which is exactly what a small one does.
+ */
+export function measuredNumbers(tokens: Token[]): MeasuredNumber[] {
+  const measured: MeasuredNumber[] = [];
+  tokens.forEach((token, i) => {
+    if (token.kind !== 'number' || token.value === undefined) return;
+    const next = tokens[i + 1];
+    const unit = next && next.kind === 'word' ? UNITS[next.text] : undefined;
+    measured.push(
+      unit
+        ? { value: token.value, dimension: unit.dimension }
+        : { value: token.value },
+    );
+  });
+  return measured;
 }
 
 function applySign(value: number, sign: Sign): number {
@@ -165,6 +226,25 @@ function flagRule(
   };
 }
 
+/**
+ * Things at ground level that a falling object lands on. Used to fix x₂ = 0
+ * without the story having to say "the ground". Raised surfaces belong in
+ * `x2-obstacle` instead — they have a height of their own.
+ */
+export const GROUND_SURFACES = [
+  'ground',
+  'pavement',
+  'floor',
+  'street',
+  'lawn',
+  'grass',
+  'water',
+  'sidewalk',
+  'concrete',
+  'dirt',
+  'sand',
+];
+
 const velocity = (sign: Sign, requireExplicitUnit = false): SlotSpec => ({
   variable: 'v0',
   dimension: VELOCITY,
@@ -174,10 +254,29 @@ const velocity = (sign: Sign, requireExplicitUnit = false): SlotSpec => ({
 });
 
 export const RULES: Rule[] = [
+  // Verbs that mean "it started at rest" without saying so. Prose reaches for
+  // these far more often than "from rest": things slip, topple and break loose.
   flagRule(
     'rest',
-    'initial velocity zero (from rest / dropped)',
-    [['from', 'rest'], ['at', 'rest'], ['dropped'], ['released']],
+    'initial velocity zero (from rest / dropped / came loose on its own)',
+    [
+      ['from', 'rest'],
+      ['at', 'rest'],
+      ['dropped'],
+      ['released'],
+      ['slips'],
+      ['slipped'],
+      ['topples'],
+      ['toppled'],
+      ['tumbles'],
+      ['tumbled'],
+      ['breaks', 'loose'],
+      ['broke', 'loose'],
+      ['comes', 'loose'],
+      ['came', 'loose'],
+      ['rolls', 'off'],
+      ['rolled', 'off'],
+    ],
     'v0',
     quantity(0, VELOCITY),
   ),
@@ -191,6 +290,13 @@ export const RULES: Rule[] = [
       ['launched', 'upward', 'at'],
       ['projected', 'upward', 'at'],
       ['upward', 'at'],
+      // Release phrased as leaving the thrower rather than as a direction.
+      ['leaves', 'her', 'hand', 'at'],
+      ['leaves', 'his', 'hand', 'at'],
+      ['leaves', 'their', 'hand', 'at'],
+      ['leaves', 'the', 'hand', 'at'],
+      ['leaves', 'her', 'hand', 'travelling', 'at'],
+      ['leaves', 'his', 'hand', 'travelling', 'at'],
     ],
     velocity('positive'),
   ),
@@ -225,6 +331,17 @@ export const RULES: Rule[] = [
       ['impacts', 'the', 'ground', 'at'],
       ['reaches', 'the', 'ground', 'at'],
       ['hits', 'the', 'ground', 'with', 'a', 'speed', 'of'],
+      // Impact against a named surface rather than "the ground", optionally
+      // with a movement participle between the surface and the speed.
+      ...['pavement', 'floor', 'street', 'lawn', 'grass', 'roof', 'water'].flatMap(
+        (surface) =>
+          ['hits', 'strikes', 'reaches', 'impacts'].flatMap((verb) => [
+            [verb, 'the', surface, 'at'],
+            [verb, 'the', surface, 'travelling', 'at'],
+            [verb, 'the', surface, 'traveling', 'at'],
+            [verb, 'the', surface, 'moving', 'at'],
+          ]),
+      ),
     ],
     { variable: 'v', dimension: VELOCITY, defaultUnit: METRE_PER_SECOND, sign: 'negative' },
   ),
@@ -289,15 +406,25 @@ export const RULES: Rule[] = [
       requireExplicitUnit: true,
     },
   ),
-  // Reaching the ground fixes the final position at x₂ = 0.
+  // Reaching the ground fixes the final position at x₂ = 0. Stories rarely say
+  // "the ground" — they name what is at ground level. Raised surfaces (roof,
+  // platform, ledge, table, shelf) are deliberately excluded: those are
+  // `x2-obstacle`, and they carry a height rather than fixing x₂ at zero.
   flagRule(
     'x2-ground',
-    'lands on the ground (x₂ = 0)',
+    'lands at ground level (x₂ = 0)',
     [
-      ['hits', 'the', 'ground'],
-      ['reaches', 'the', 'ground'],
       ['to', 'the', 'ground'],
       ['on', 'the', 'ground'],
+      ...GROUND_SURFACES.flatMap((surface) => [
+        ['hits', 'the', surface],
+        ['strikes', 'the', surface],
+        ['reaches', 'the', surface],
+        ['impacts', 'the', surface],
+        ['lands', 'on', 'the', surface],
+        ['into', 'the', surface],
+        ['onto', 'the', surface],
+      ]),
     ],
     'x2',
     quantity(0, LENGTH),

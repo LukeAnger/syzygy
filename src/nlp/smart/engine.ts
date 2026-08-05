@@ -8,9 +8,18 @@
 import type { MLCEngine, InitProgressReport } from '@mlc-ai/web-llm';
 
 /**
- * Smallest model we'd trust for this extraction task. SmolLM2-135M is smaller
- * but too weak for the compositional cases; 0.5B / 1B are more robust. One line
- * to swap.
+ * Extraction model. Deliberately still the smallest tier: the guards around it
+ * (`dropUngrounded`, `mergeParses`) are meant to make a weak model *safe*, and
+ * that only gets tested by leaving the model fixed while they change. Bumping
+ * the model at the same time would confound the result.
+ *
+ * When a bump is warranted, it is this one line. Measured from the WebLLM
+ * prebuilt list, cheapest first:
+ *   Llama-3.2-1B-Instruct-q4f16_1-MLC     879 MB
+ *   Qwen2.5-0.5B-Instruct-q4f16_1-MLC     945 MB
+ *   Qwen2.5-1.5B-Instruct-q4f16_1-MLC    1630 MB
+ * Llama-3.2-1B is both larger in parameters and smaller in VRAM than
+ * Qwen2.5-0.5B, so the 0.5B tier is strictly dominated — skip it.
  */
 export const SMART_MODEL = {
   id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',

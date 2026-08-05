@@ -1,13 +1,27 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_INPUTS,
+  type InputKey,
   assignmentsToInputs,
   buildKnowns,
   convertInputs,
+  mergeParses,
   solveInputs,
+  solvePhaseSequence,
   useKinematicsStore,
 } from './store.ts';
-import { VELOCITY, quantity } from '../math/index.ts';
+import { LENGTH, TIME, VELOCITY, quantity } from '../math/index.ts';
+import { relevanceFor } from '../engine/index.ts';
+import { smartParse } from '../nlp/smart/index.ts';
+
+// The real module pulls in WebLLM and needs a GPU; the store only cares that it
+// returns a ParseResult or null.
+vi.mock('../nlp/smart/index.ts', () => ({
+  SMART_MODEL: { id: 'test-model', label: 'Test', approxMB: 1 },
+  isSmartParseSupported: () => true,
+  warmUp: async () => {},
+  smartParse: vi.fn(),
+}));
 
 describe('buildKnowns', () => {
   it('parses non-empty inputs into SI quantities and skips blanks', () => {
@@ -120,5 +134,326 @@ describe('store: Storymode is self-contained', () => {
     expect(state.story).toBe('');
     expect(state.given).toEqual([]);
     expect(state.inputs).toEqual(DEFAULT_INPUTS);
+  });
+});
+
+describe('store: the question the story asks', () => {
+  beforeEach(() => useKinematicsStore.getState().reset());
+
+  it('records the variable the story asked for', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory('a ball is dropped from a height of 45 m. how fast is it going when it lands?');
+    expect(useKinematicsStore.getState().asked).toBe('v');
+  });
+
+  it('leaves it unset when the story only narrates', () => {
+    useKinematicsStore.getState().loadStory('a ball is dropped from a height of 45 m');
+    expect(useKinematicsStore.getState().asked).toBeUndefined();
+  });
+
+  it('clears it on reset', () => {
+    useKinematicsStore.getState().loadStory('find the time. a ball drops from 45 m');
+    useKinematicsStore.getState().reset();
+    expect(useKinematicsStore.getState().asked).toBeUndefined();
+  });
+
+  /** The point of the feature: naming the values the answer never touched. */
+  it('identifies givens the answer does not depend on', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory('a ball is dropped from a height of 45 m. how fast is it going when it lands?');
+    const state = useKinematicsStore.getState();
+    const result = solveInputs(state.inputs, state.unitSystem);
+    const relevance = relevanceFor(state.asked!, state.given, result);
+
+    expect(relevance.solved).toBe(true);
+    expect(relevance.used).toContain('v0');
+    // Every given here genuinely feeds v, so nothing is flagged.
+    expect(relevance.unnecessary).toEqual([]);
+  });
+});
+
+describe('store: staged motion', () => {
+  beforeEach(() => useKinematicsStore.getState().reset());
+
+  const ROOF =
+    'a ball is dropped off a roof at 150m then falls on another roof thats 30m ' +
+    'high. the ball then rolls off and falls to the ground. how fast is the ' +
+    'ball traveling when it hits the ground?';
+
+  /** End to end: the case that motivated the whole phase model. */
+  it('answers a two-phase fall from the final segment', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    const state = useKinematicsStore.getState();
+
+    expect(state.phases?.phases).toHaveLength(2);
+    expect(state.asked).toBe('v');
+
+    const solved = solvePhaseSequence(state.phases!, state.inputs, state.unitSystem);
+    expect(solved.conflicts).toEqual([]);
+    // Only the 30 m fall counts: −√(2·9.81·30) ≈ −24.26, not the −54.2 a
+    // single 150 m fall gives.
+    expect(solved.phases[1]!.knowns['v']?.value).toBeCloseTo(-24.26, 2);
+  });
+
+  it('carries the story\'s initial velocity into the first segment only', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    const state = useKinematicsStore.getState();
+    const solved = solvePhaseSequence(state.phases!, state.inputs, state.unitSystem);
+
+    expect(solved.phases[0]!.knowns['v0']?.value).toBe(0); // "dropped"
+    // The second segment's start comes from the link, not from the story.
+    expect(solved.phases[1]!.knowns['v0']?.value).toBe(0);
+    expect(solved.phases[1]!.knowns['x1']?.value).toBe(30);
+  });
+
+  /** The panel must not claim a number is unplaced that the phases used. */
+  it('does not report a height the phase split consumed as unplaced', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    const state = useKinematicsStore.getState();
+    expect(state.phases).toBeDefined();
+    expect(state.unusedNumbers).not.toContain(30);
+  });
+
+  it('warns when a story stages itself but cannot be segmented', () => {
+    // Staged prose, but no chain of heights to split on.
+    useKinematicsStore
+      .getState()
+      .loadStory('a ball falls 40 m and then rolls off and hits the ground');
+    const state = useKinematicsStore.getState();
+    expect(state.phases).toBeUndefined();
+    expect(state.unsegmentedStages).toBe(true);
+  });
+
+  it('does not warn about an ordinary single-stage story', () => {
+    useKinematicsStore.getState().loadStory('a ball is dropped from a height of 45 m');
+    expect(useKinematicsStore.getState().unsegmentedStages).toBe(false);
+  });
+
+  it('leaves a single-segment story unsegmented', () => {
+    useKinematicsStore.getState().loadStory('a ball is dropped from a height of 45 m');
+    expect(useKinematicsStore.getState().phases).toBeUndefined();
+  });
+
+  it('clears segmentation on reset', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    useKinematicsStore.getState().reset();
+    expect(useKinematicsStore.getState().phases).toBeUndefined();
+  });
+});
+
+describe('store: editing phases', () => {
+  beforeEach(() => useKinematicsStore.getState().reset());
+
+  const ROOF =
+    'a ball is dropped off a roof at 150m then falls on another roof thats 30m ' +
+    'high. the ball then rolls off and falls to the ground.';
+
+  it('corrects a mis-parsed height and changes the answer', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    useKinematicsStore.getState().setPhaseHeight(1, 'x1', '45');
+
+    const state = useKinematicsStore.getState();
+    const solved = solvePhaseSequence(state.phases!, state.inputs, state.unitSystem);
+    // −√(2·9.81·45) ≈ −29.71, not the −24.26 the parsed 30 m gave.
+    expect(solved.phases[1]!.knowns['v']?.value).toBeCloseTo(-29.71, 2);
+  });
+
+  it('changes what carries across a boundary', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    useKinematicsStore.getState().setPhaseLink(0, 'continuous');
+
+    const state = useKinematicsStore.getState();
+    const solved = solvePhaseSequence(state.phases!, state.inputs, state.unitSystem);
+    // Uninterrupted, the whole 150 m fall counts again.
+    expect(solved.phases[1]!.knowns['v']?.value).toBeCloseTo(-54.25, 1);
+  });
+
+  it('splits a single-segment story into two, continuing from its end', () => {
+    useKinematicsStore.getState().loadStory('a ball is dropped from a height of 45 m');
+    expect(useKinematicsStore.getState().phases).toBeUndefined();
+
+    useKinematicsStore.getState().addPhase();
+    const phases = useKinematicsStore.getState().phases!;
+    expect(phases.phases).toHaveLength(2);
+    expect(phases.phases[0]).toEqual({ x1: '45', x2: '0' });
+    expect(phases.phases[1]!.x1).toBe('0'); // continues where phase 1 ended
+    expect(phases.links).toHaveLength(1);
+  });
+
+  it('appends a segment from the last one\'s end', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    useKinematicsStore.getState().addPhase();
+    const phases = useKinematicsStore.getState().phases!;
+    expect(phases.phases).toHaveLength(3);
+    expect(phases.phases[2]!.x1).toBe('0');
+    expect(phases.links).toHaveLength(2);
+  });
+
+  it('keeps links one shorter than phases when removing', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    useKinematicsStore.getState().addPhase(); // 3 phases, 2 links
+    useKinematicsStore.getState().removePhase(1);
+
+    const phases = useKinematicsStore.getState().phases!;
+    expect(phases.phases).toHaveLength(2);
+    expect(phases.links).toHaveLength(1);
+  });
+
+  it('collapses to a single-segment story when only one phase is left', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    useKinematicsStore.getState().removePhase(0);
+    expect(useKinematicsStore.getState().phases).toBeUndefined();
+  });
+
+  it('abandons the split on demand', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    useKinematicsStore.getState().clearPhases();
+    expect(useKinematicsStore.getState().phases).toBeUndefined();
+    expect(useKinematicsStore.getState().unsegmentedStages).toBe(false);
+  });
+
+  it('converts phase heights with the unit system', () => {
+    useKinematicsStore.getState().loadStory(ROOF);
+    useKinematicsStore.getState().setUnitSystem('imperial');
+
+    const phases = useKinematicsStore.getState().phases!;
+    // 150 m ≈ 492.126 ft — reinterpreting 150 as feet would be a silent error.
+    expect(Number(phases.phases[0]!.x1)).toBeCloseTo(492.126, 2);
+    expect(Number(phases.phases[0]!.x2)).toBeCloseTo(98.425, 2);
+  });
+});
+
+describe('mergeParses', () => {
+  const assign = (variable: InputKey, value: number, dim = LENGTH) => ({
+    variable,
+    quantity: quantity(value, dim),
+    ruleId: 'x',
+    source: '',
+  });
+
+  it('fills only the slots the grammar left empty', () => {
+    const merged = mergeParses(
+      { text: 's', assignments: [assign('v0', -4, VELOCITY)], unusedNumbers: [150] },
+      {
+        text: 's',
+        assignments: [assign('v0', 99, VELOCITY), assign('x1', 150)],
+        unusedNumbers: [],
+      },
+    );
+    const byVar = Object.fromEntries(
+      merged.assignments.map((a) => [a.variable, a.quantity.value]),
+    );
+    // Rule wins the contested slot; smart contributes only the missing one.
+    expect(byVar['v0']).toBe(-4);
+    expect(byVar['x1']).toBe(150);
+    expect(merged.assignments).toHaveLength(2);
+  });
+
+  it('reports a number unplaced only when neither parser placed it', () => {
+    const merged = mergeParses(
+      { text: 's', assignments: [], unusedNumbers: [150, 32] },
+      { text: 's', assignments: [], unusedNumbers: [32] },
+    );
+    expect(merged.unusedNumbers).toEqual([32]);
+  });
+});
+
+describe('store: the ground-landing default', () => {
+  beforeEach(() => {
+    useKinematicsStore.getState().reset();
+    vi.mocked(smartParse).mockReset();
+  });
+
+  it('applies when a start position is known and no duration is', () => {
+    useKinematicsStore.getState().loadStory('dropped from a height of 45 m');
+    expect(useKinematicsStore.getState().inputs.x2).toBe('0');
+  });
+
+  /** A stated duration means the story defines its own endpoint. */
+  it('is withheld when the story states a duration', async () => {
+    vi.mocked(smartParse).mockResolvedValue({
+      text: 'story',
+      assignments: [
+        { variable: 'x1', quantity: quantity(150, LENGTH), ruleId: 'smart', source: '' },
+        { variable: 't', quantity: quantity(6, TIME), ruleId: 'smart', source: '' },
+      ],
+      unusedNumbers: [],
+    });
+
+    await useKinematicsStore.getState().enableSmart();
+    await useKinematicsStore.getState().submitStory('story');
+    const state = useKinematicsStore.getState();
+
+    expect(state.inputs.x1).toBe('150');
+    expect(state.inputs.t).toBe('6');
+    // NOT '0' — the capsule is still moving when the problem stops.
+    expect(state.inputs.x2).toBe('');
+  });
+
+  it('merges grammar and model results rather than replacing', async () => {
+    // The model finds the height the grammar missed; the grammar keeps the
+    // signed initial velocity and duration the model missed.
+    vi.mocked(smartParse).mockResolvedValue({
+      text: 'story',
+      assignments: [
+        { variable: 'x1', quantity: quantity(150, LENGTH), ruleId: 'smart', source: '' },
+      ],
+      unusedNumbers: [],
+    });
+
+    await useKinematicsStore.getState().enableSmart();
+    await useKinematicsStore
+      .getState()
+      .submitStory(
+        'a capsule passes a marker while already moving downward at 4 m/s for 6 s',
+      );
+    const state = useKinematicsStore.getState();
+
+    expect(state.inputs.x1).toBe('150'); // from the model
+    expect(state.inputs.v0).toBe('-4'); // from the grammar
+    expect(state.inputs.t).toBe('6'); // from the grammar
+  });
+
+  it('adopts the system the story is written in, and displays in it', () => {
+    vi.mocked(smartParse).mockReset();
+    useKinematicsStore.getState().loadStory('a brick is dropped from a height of 62 ft');
+    const state = useKinematicsStore.getState();
+
+    expect(state.unitSystem).toBe('imperial');
+    // Displayed in feet, not silently converted to 18.9 m.
+    expect(state.inputs.x1).toBe('62');
+    expect(state.inputs.a).toBe('-32.17');
+  });
+
+  /**
+   * Acceleration used to carry over from the form, so an imperial story left
+   * −32.17 ft/s² behind and the next metric story inherited it as −9.805416.
+   */
+  it('does not leak one story\'s gravity into the next', () => {
+    useKinematicsStore.getState().loadStory('a brick is dropped from a height of 62 ft');
+    expect(useKinematicsStore.getState().inputs.a).toBe('-32.17');
+
+    useKinematicsStore.getState().loadStory('a ball is dropped from a height of 45 m');
+    const state = useKinematicsStore.getState();
+    expect(state.unitSystem).toBe('metric');
+    expect(state.inputs.a).toBe('-9.81');
+  });
+
+  it('keeps the active system when the story states no units', () => {
+    useKinematicsStore.getState().setUnitSystem('imperial');
+    useKinematicsStore.getState().loadStory('a ball is dropped');
+    expect(useKinematicsStore.getState().unitSystem).toBe('imperial');
+  });
+
+  it('falls back to the rule parser when smart parse returns null', async () => {
+    vi.mocked(smartParse).mockResolvedValue(null);
+
+    await useKinematicsStore.getState().enableSmart();
+    await useKinematicsStore.getState().submitStory('dropped from a height of 45 m');
+
+    expect(useKinematicsStore.getState().inputs.x1).toBe('45');
+    expect(useKinematicsStore.getState().inputs.x2).toBe('0');
   });
 });

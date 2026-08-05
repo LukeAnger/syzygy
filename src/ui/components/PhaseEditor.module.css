@@ -1,0 +1,132 @@
+.wrap {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.label {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.6rem;
+}
+
+.warn {
+  margin: 0 0 0.7rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--accent-2);
+}
+
+.phase {
+  margin-bottom: 0.55rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.index {
+  width: 1.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--accent);
+}
+
+.height {
+  width: 4.6rem;
+  padding: 0.28rem 0.4rem;
+  background: var(--bg);
+  border: var(--edge);
+  border-radius: var(--radius);
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.height:focus {
+  outline: none;
+  border-color: var(--panel-edge-strong);
+  box-shadow: var(--glow);
+}
+
+.unit {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-dim);
+}
+
+.arrow {
+  margin: 0 0.15rem;
+  color: var(--text-dim);
+}
+
+.remove {
+  margin-left: auto;
+  padding: 0 0.4rem;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.remove:hover {
+  color: var(--danger);
+}
+
+.linkRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.3rem 0 0 1.45rem;
+}
+
+.linkLabel {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.link {
+  padding: 0.2rem 0.35rem;
+  background: var(--bg);
+  border: var(--edge);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.7rem;
+}
+
+.add,
+.clear {
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.add {
+  color: var(--accent);
+}
+
+.clear {
+  color: var(--text-dim);
+}
+
+.add:hover,
+.clear:hover {
+  text-decoration: underline;
+}

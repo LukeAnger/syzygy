@@ -14,9 +14,25 @@ import {
   toUnit,
   unitKit,
 } from '../math/index.ts';
-import { type Knowns, type SolveResult, solve } from '../engine/index.ts';
+import {
+  type Knowns,
+  type LinkKind,
+  type PhaseLink,
+  type PhaseSolveResult,
+  type SolveResult,
+  solve,
+  solvePhases,
+} from '../engine/index.ts';
 import { kinematics1D } from '../domains/kinematics-1d/index.ts';
-import { type Assignment, type ParseResult, parse } from '../nlp/index.ts';
+import {
+  type Assignment,
+  type ParseResult,
+  type Segmentation,
+  describesStages,
+  detectSystem,
+  parse,
+  segmentPhases,
+} from '../nlp/index.ts';
 import {
   SMART_MODEL,
   isSmartParseSupported,
@@ -75,6 +91,102 @@ export function buildKnowns(inputs: Inputs, system: UnitSystem): Knowns {
 /** Run the solver over the current inputs. */
 export function solveInputs(inputs: Inputs, system: UnitSystem): SolveResult {
   return solve(kinematics1D, buildKnowns(inputs, system));
+}
+
+/** One motion segment's start and end height, as the strings a user edits. */
+export interface PhaseInputs {
+  x1: string;
+  x2: string;
+}
+
+/**
+ * The editable phase sequence. `links[i]` joins phase i to phase i + 1, so
+ * there is always one fewer link than phase.
+ *
+ * Held as display strings rather than the parser's quantities so the sequence
+ * is editable on the same terms as the variable form. §4.4 makes the manual
+ * form the ground truth and the parser a pre-fill; phases were briefly an
+ * exception to that, which made a mis-segmented story unfixable.
+ */
+export interface PhaseState {
+  phases: PhaseInputs[];
+  links: PhaseLink[];
+}
+
+/** Length unit the phase heights are typed in. */
+function lengthUnit(system: UnitSystem) {
+  return variable('x1').displayUnit(unitKit(system));
+}
+
+/** Re-express every phase height from one unit system in another. */
+export function convertPhaseHeights(
+  state: PhaseState,
+  from: UnitSystem,
+  to: UnitSystem,
+): PhaseState {
+  if (from === to) return state;
+  const fromUnitOf = lengthUnit(from);
+  const toUnitOf = lengthUnit(to);
+  const convert = (raw: string): string => {
+    const value = Number(raw.trim());
+    if (raw.trim() === '' || !Number.isFinite(value)) return raw;
+    const si = fromUnit(value, fromUnitOf);
+    return String(Number(toUnit(si, toUnitOf).toFixed(6)));
+  };
+  return {
+    ...state,
+    phases: state.phases.map((phase) => ({
+      x1: convert(phase.x1),
+      x2: convert(phase.x2),
+    })),
+  };
+}
+
+/** Turn a parsed segmentation into the editable form. */
+function toPhaseState(segmentation: Segmentation, system: UnitSystem): PhaseState {
+  return {
+    phases: segmentation.phases.map((phase) => ({
+      x1: quantityToInput('x1', phase.x1, system),
+      x2: quantityToInput('x2', phase.x2, system),
+    })),
+    links: [...segmentation.links],
+  };
+}
+
+/**
+ * Solve a story that describes motion in more than one segment.
+ *
+ * Each segment supplies its own start and end height; everything else comes
+ * from the shared inputs. Only the *first* segment inherits the story's stated
+ * initial velocity — later segments get theirs from the link, which is the
+ * whole point of the link (a ball that lands and rolls off departs from rest
+ * regardless of how fast it arrived).
+ */
+export function solvePhaseSequence(
+  state: PhaseState,
+  inputs: Inputs,
+  system: UnitSystem,
+): PhaseSolveResult {
+  const shared = buildKnowns(inputs, system);
+  const unit = lengthUnit(system);
+  const height = (raw: string): Quantity | undefined => {
+    const value = Number(raw.trim());
+    return raw.trim() === '' || !Number.isFinite(value)
+      ? undefined
+      : fromUnit(value, unit);
+  };
+
+  const phases = state.phases.map((phase, i) => {
+    const knowns: Record<string, Quantity> = {};
+    const x1 = height(phase.x1);
+    const x2 = height(phase.x2);
+    if (x1) knowns['x1'] = x1;
+    if (x2) knowns['x2'] = x2;
+    if (shared['a']) knowns['a'] = shared['a'];
+    if (i === 0 && shared['v0']) knowns['v0'] = shared['v0'];
+    return { knowns };
+  });
+  return solvePhases(kinematics1D, phases, state.links);
 }
 
 /** Format an SI quantity as a plain input string in the given system's unit. */
@@ -139,16 +251,87 @@ const SINK: CollectorSink = collectorConfigured(COLLECTOR)
   : noopSink;
 export const COLLECTOR_CONFIGURED = collectorConfigured(COLLECTOR);
 
+/**
+ * Layer smart-parse assignments over the rule parser's, filling only the slots
+ * the grammar left empty.
+ *
+ * Rule wins every contested slot, which is what makes smart parse safe to
+ * enable: it can add information but never contradict the deterministic
+ * baseline, so turning it on cannot make a story parse worse. The two are
+ * genuinely complementary — on a braking-capsule problem the grammar recovers
+ * `v0=-4` and `t=6` (including the sign) while the model recovers `x1` and the
+ * stated acceleration; neither solves it alone and together they do.
+ */
+export function mergeParses(rule: ParseResult, smart: ParseResult): ParseResult {
+  const claimed = new Set(rule.assignments.map((a) => a.variable));
+  const filled = smart.assignments.filter((a) => !claimed.has(a.variable));
+  return {
+    text: rule.text,
+    assignments: [...rule.assignments, ...filled],
+    // Unplaced only if neither parser accounted for it.
+    unusedNumbers: rule.unusedNumbers.filter((n) =>
+      smart.unusedNumbers.includes(n),
+    ),
+    // The question is read by the grammar alone; the model is never asked.
+    target: rule.target,
+  };
+}
+
+/** Free-fall acceleration as an input string, in each system's own unit. */
+const FREE_FALL: Record<UnitSystem, string> = {
+  metric: '-9.81',
+  imperial: '-32.17',
+};
+
 /** Build the input/given/story state patch from a parse result. */
-function statePatch(currentAcceleration: string, system: UnitSystem, text: string, result: ParseResult) {
+function statePatch(system: UnitSystem, text: string, result: ParseResult) {
   const parsed = assignmentsToInputs(result.assignments, system);
+  const segmentation = segmentPhases(text);
   // "Falls to the ground": start position given but no final one ⇒ x₂ = 0.
-  if (parsed.x1 !== undefined && parsed.x2 === undefined) parsed.x2 = '0';
+  //
+  // Only when no duration is known. A stated time means the story defines its
+  // own endpoint — the object is wherever the motion carries it — so assuming
+  // it landed invents a landing the story never described. A braking capsule
+  // given 6 s of deceleration is the case that exposed this: defaulting x₂ to
+  // the shaft floor produced a spurious Δx and a confident wrong answer, where
+  // leaving it blank correctly reports "not enough information".
+  if (
+    parsed.x1 !== undefined &&
+    parsed.x2 === undefined &&
+    parsed.t === undefined
+  ) {
+    parsed.x2 = '0';
+  }
+  const phaseState = segmentation ? toPhaseState(segmentation, system) : undefined;
+  // A height the phase split consumed is placed, whatever the flat parse
+  // thought. Without this the panel reports "couldn't place 30" beside a phase
+  // editor visibly using 30 twice.
+  const inPhases = new Set(
+    (phaseState?.phases ?? []).flatMap((phase) => [
+      Number(phase.x1),
+      Number(phase.x2),
+    ]),
+  );
+
   return {
     story: text,
     given: Object.keys(parsed) as GivenKeys,
-    unusedNumbers: result.unusedNumbers,
-    inputs: { ...DEFAULT_INPUTS, a: currentAcceleration, ...parsed },
+    unusedNumbers: result.unusedNumbers.filter((n) => !inPhases.has(n)),
+    // The engine's VariableKey is a loose string; the store's is the closed
+    // union, and the parser only ever targets a member of it.
+    asked: result.target as VariableKey | undefined,
+    // Undefined for the overwhelming majority of stories, which are one
+    // segment; the app then solves exactly as it always has.
+    phases: phaseState,
+    // Staged prose we could not turn into a chain. The single-segment path
+    // will still answer it, so the UI has to say the answer may be partial.
+    unsegmentedStages: describesStages(text) && !segmentation,
+    // Acceleration resets to free fall for this story's system unless the story
+    // states one. It used to carry over from whatever was in the form, which
+    // let one story's gravity leak into the next: solving an imperial problem
+    // left a = −32.17 ft/s² behind, and the next metric story inherited it as
+    // −9.805416 m/s² — close enough to −9.81 to pass a glance, and wrong.
+    inputs: { ...DEFAULT_INPUTS, a: FREE_FALL[system], ...parsed },
   };
 }
 
@@ -180,6 +363,18 @@ export interface KinematicsState {
   given: GivenKeys;
   /** Numbers the parser could not place, surfaced from the last parse. */
   unusedNumbers: number[];
+  /**
+   * The variable the story asked for, when it asked for one. Undefined for a
+   * story that only narrates — the solver then reports everything it can.
+   */
+  asked?: VariableKey;
+  /**
+   * Motion segments, when the story describes more than one. Undefined for a
+   * single-segment story, which is solved exactly as before.
+   */
+  phases?: PhaseState;
+  /** Story signposts stages the parser could not turn into a phase chain. */
+  unsegmentedStages: boolean;
   /** Opt-in local-LLM parsing. */
   smartEnabled: boolean;
   smartStatus: SmartStatus;
@@ -197,6 +392,16 @@ export interface KinematicsState {
   loadStory(text: string): void;
   enableSmart(): Promise<void>;
   disableSmart(): void;
+  /** Edit one segment's start or end height. */
+  setPhaseHeight(index: number, key: keyof PhaseInputs, value: string): void;
+  /** Change what carries across a boundary. */
+  setPhaseLink(index: number, kind: LinkKind): void;
+  /** Append a segment continuing from where the last one ended. */
+  addPhase(): void;
+  /** Drop a segment, collapsing back to a single-segment story at one left. */
+  removePhase(index: number): void;
+  /** Abandon the phase split and solve as one segment. */
+  clearPhases(): void;
   setShareConsent(consent: boolean): void;
   loadFreeFall(): void;
   reset(): void;
@@ -209,6 +414,9 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   story: '',
   given: [],
   unusedNumbers: [],
+  asked: undefined,
+  phases: undefined,
+  unsegmentedStages: false,
   smartEnabled: false,
   smartStatus: isSmartParseSupported() ? 'idle' : 'unsupported',
   smartProgress: 0,
@@ -226,12 +434,20 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
     set((state) => ({
       unitSystem: system,
       inputs: convertInputs(state.inputs, state.unitSystem, system),
+      // Phase heights are display strings too, so they convert with everything
+      // else — otherwise switching to feet would reinterpret 30 m as 30 ft.
+      phases: state.phases
+        ? convertPhaseHeights(state.phases, state.unitSystem, system)
+        : undefined,
     })),
 
   loadStory: (text) => {
     const state = get();
     const result = parse(text);
-    set(statePatch(state.inputs.a, state.unitSystem, text, result));
+    // A story written in feet is an imperial problem: solve *and* display it
+    // that way, rather than silently converting the answer to metres.
+    const system = detectSystem(text) ?? state.unitSystem;
+    set({ ...statePatch(system, text, result), unitSystem: system });
     maybeCollect(text, result, 'rule', state.shareConsent);
   },
 
@@ -239,9 +455,13 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
     const state = get();
     if (state.smartEnabled && state.smartStatus === 'ready') {
       try {
-        const result = await smartParse(text, state.unitSystem);
-        if (result) {
-          set(statePatch(get().inputs.a, state.unitSystem, text, result));
+        const smart = await smartParse(text, state.unitSystem);
+        if (smart) {
+          // The grammar is the floor, not the alternative — smart parse only
+          // fills what it left empty.
+          const result = mergeParses(parse(text), smart);
+          const system = detectSystem(text) ?? state.unitSystem;
+          set({ ...statePatch(system, text, result), unitSystem: system });
           maybeCollect(text, result, 'smart', get().shareConsent);
           return;
         }
@@ -272,11 +492,77 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
       smartStatus: isSmartParseSupported() ? 'idle' : 'unsupported',
     }),
 
+  setPhaseHeight: (index, key, value) =>
+    set((state) => {
+      if (!state.phases) return {};
+      const phases = state.phases.phases.map((phase, i) =>
+        i === index ? { ...phase, [key]: value } : phase,
+      );
+      return { phases: { ...state.phases, phases } };
+    }),
+
+  setPhaseLink: (index, kind) =>
+    set((state) => {
+      if (!state.phases) return {};
+      const links = state.phases.links.map((link, i) =>
+        i === index ? { ...link, kind } : link,
+      );
+      return { phases: { ...state.phases, links } };
+    }),
+
+  addPhase: () =>
+    set((state) => {
+      // Splitting a single-segment story: the existing motion becomes phase 1
+      // and the new segment continues from where it ended.
+      if (!state.phases) {
+        return {
+          phases: {
+            phases: [
+              { x1: state.inputs.x1, x2: state.inputs.x2 },
+              { x1: state.inputs.x2, x2: '' },
+            ],
+            links: [{ kind: 'rest' as LinkKind }],
+          },
+        };
+      }
+      const last = state.phases.phases[state.phases.phases.length - 1];
+      return {
+        phases: {
+          phases: [...state.phases.phases, { x1: last?.x2 ?? '', x2: '' }],
+          links: [...state.phases.links, { kind: 'rest' as LinkKind }],
+        },
+      };
+    }),
+
+  removePhase: (index) =>
+    set((state) => {
+      if (!state.phases) return {};
+      const phases = state.phases.phases.filter((_, i) => i !== index);
+      // One segment is not a sequence — fall back to the ordinary path.
+      if (phases.length < 2) return { phases: undefined };
+      // Drop the link that joined the removed segment to its predecessor,
+      // or the leading link when the first segment goes.
+      const dropped = index === 0 ? 0 : index - 1;
+      return {
+        phases: { phases, links: state.phases.links.filter((_, i) => i !== dropped) },
+      };
+    }),
+
+  clearPhases: () => set({ phases: undefined, unsegmentedStages: false }),
+
   setShareConsent: (consent) => set({ shareConsent: consent }),
 
   loadFreeFall: () =>
     set((state) => ({ inputs: { ...state.inputs, a: DEFAULT_INPUTS.a } })),
 
   reset: () =>
-    set({ inputs: DEFAULT_INPUTS, story: '', given: [], unusedNumbers: [] }),
+    set({
+      inputs: DEFAULT_INPUTS,
+      story: '',
+      given: [],
+      unusedNumbers: [],
+      asked: undefined,
+  phases: undefined,
+  unsegmentedStages: false,
+    }),
 }));

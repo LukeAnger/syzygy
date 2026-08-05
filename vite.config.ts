@@ -7,6 +7,19 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
   base: '/syzygy/',
   plugins: [react()],
+  // Vitest and a running dev server otherwise share `node_modules/.vite`, and
+  // whichever re-optimizes first pulls the cache out from under the other —
+  // which surfaced as every test file at once reporting "No test suite found"
+  // while `npm run dev` happened to be up. Bisected: dev server running, all 19
+  // files fail; dev server stopped, all pass. Separate caches, no collision.
+  cacheDir: process.env['VITEST'] ? 'node_modules/.vite-test' : 'node_modules/.vite',
+  server: {
+    watch: {
+      // Build and coverage output are not sources, and `npm run ci` rewrites
+      // the whole coverage tree mid-run. Watching it just thrashes reloads.
+      ignored: ['**/coverage/**', '**/dist/**'],
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

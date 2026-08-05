@@ -55,3 +55,10 @@
   cursor: pointer;
   text-decoration: underline dotted;
 }
+
+/* Shown when the motion is staged and positions live in the phase list. */
+.staged {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}

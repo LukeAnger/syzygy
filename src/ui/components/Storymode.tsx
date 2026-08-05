@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useKinematicsStore } from '../../state/index.ts';
 import { Understood } from './Understood.tsx';
+import { PhaseEditor } from './PhaseEditor.tsx';
 import styles from './Storymode.module.css';
 
 const EXAMPLES = [
@@ -109,6 +110,7 @@ export function Storymode() {
       </p>
 
       <Understood />
+      <PhaseEditor />
       <ShareConsent />
     </section>
   );

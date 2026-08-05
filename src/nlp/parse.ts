@@ -11,6 +11,7 @@ import type { Knowns, VariableKey } from '../engine/index.ts';
 import type { Assignment, ParseResult, SlotMatch, Tokenizer } from './types.ts';
 import { defaultTokenizer } from './tokenizer.ts';
 import { RULES } from './grammar.ts';
+import { detectQuestion } from './question.ts';
 
 export function parse(
   input: string,
@@ -44,6 +45,7 @@ export function parse(
     text: tokens.map((t) => t.text).join(' '),
     assignments,
     unusedNumbers,
+    target: detectQuestion(input)?.target,
   };
 }
 

@@ -15,6 +15,7 @@ export function Understood() {
   const unitSystem = useKinematicsStore((s) => s.unitSystem);
   const setMode = useKinematicsStore((s) => s.setMode);
   const story = useKinematicsStore((s) => s.story);
+  const phases = useKinematicsStore((s) => s.phases);
 
   if (!story) {
     return (
@@ -30,8 +31,13 @@ export function Understood() {
   const givenSet = new Set<InputKey>(given);
   // Acceleration is always present as the free-fall assumption unless the story
   // stated it explicitly.
+  //
+  // Staged motion has no single pair of positions — each segment has its own,
+  // and they are edited below. Showing a flat x₁/x₂ here would contradict the
+  // phase list and describe motion the app is not actually solving.
   const shown: InputKey[] = VARIABLES.filter(
-    (key) => inputs[key].trim() !== '',
+    (key) =>
+      inputs[key].trim() !== '' && !(phases && (key === 'x1' || key === 'x2')),
   );
 
   return (
@@ -54,6 +60,11 @@ export function Understood() {
           );
         })}
       </div>
+      {phases && (
+        <p className={styles.staged}>
+          Positions are per phase — see below.
+        </p>
+      )}
       <button
         type="button"
         className={styles.adjust}

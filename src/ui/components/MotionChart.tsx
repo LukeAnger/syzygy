@@ -7,7 +7,12 @@ import { unitFactor, unitSymbol } from '../units.ts';
 import styles from './MotionChart.module.css';
 
 interface MotionChartProps {
-  result: SolveResult;
+  /**
+   * One entry per motion segment, in order — a single-element array for
+   * ordinary motion. Plotting only the first segment of a staged fall would
+   * contradict the answer, which comes from the last.
+   */
+  results: SolveResult[];
   unitSystem: UnitSystem;
 }
 
@@ -18,15 +23,26 @@ const GRID = 'rgba(0, 229, 255, 0.08)';
 const TICK = '#6f8a92';
 
 /** Plots position and velocity over the motion once v₀, a, and t are known. */
-export function MotionChart({ result, unitSystem }: MotionChartProps) {
-  const { knowns } = result;
-  const v0 = knowns['v0'];
-  const a = knowns['a'];
-  const t = knowns['t'];
+export function MotionChart({ results, unitSystem }: MotionChartProps) {
+  // A segment is plottable once its own v₀, a and duration are known. Later
+  // segments of a staged fall often resolve before earlier ones, so plot the
+  // leading run that is ready rather than dropping the chart entirely.
+  const ready: { v0: number; a: number; t: number; x0: number }[] = [];
+  for (const result of results) {
+    const { knowns } = result;
+    const v0 = knowns['v0'];
+    const a = knowns['a'];
+    const t = knowns['t'];
+    if (!v0 || !a || !t || t.value <= 0) break;
+    ready.push({
+      v0: v0.value,
+      a: a.value,
+      t: t.value,
+      x0: knowns['x1']?.value ?? 0,
+    });
+  }
 
-  const ready = v0 && a && t && t.value > 0;
-
-  if (!ready) {
+  if (ready.length === 0) {
     return (
       <section className={styles.panel}>
         <h2 className={styles.title}>Motion</h2>
@@ -37,20 +53,30 @@ export function MotionChart({ result, unitSystem }: MotionChartProps) {
     );
   }
 
-  const tMax = t.value; // seconds (same in both systems)
-  const x0 = knowns['x1']?.value ?? 0; // absolute starting position, else 0
   const lengthFactor = unitFactor('x1', unitSystem);
   const velocityFactor = unitFactor('v', unitSystem);
 
   const labels: string[] = [];
   const position: number[] = [];
   const velocity: number[] = [];
-  for (let i = 0; i <= SAMPLES; i++) {
-    const tau = (tMax * i) / SAMPLES;
-    labels.push(tau.toFixed(2));
-    position.push((x0 + v0.value * tau + 0.5 * a.value * tau * tau) / lengthFactor);
-    velocity.push((v0.value + a.value * tau) / velocityFactor);
-  }
+  // Segments are laid end to end on a shared clock, so a staged fall reads as
+  // one continuous motion — the velocity reset at a boundary shows up as the
+  // discontinuity it physically is.
+  let elapsed = 0;
+  ready.forEach((segment, index) => {
+    // Skip the duplicate sample where one segment's end meets the next's start.
+    const from = index === 0 ? 0 : 1;
+    for (let i = from; i <= SAMPLES; i++) {
+      const tau = (segment.t * i) / SAMPLES;
+      labels.push((elapsed + tau).toFixed(2));
+      position.push(
+        (segment.x0 + segment.v0 * tau + 0.5 * segment.a * tau * tau) /
+          lengthFactor,
+      );
+      velocity.push((segment.v0 + segment.a * tau) / velocityFactor);
+    }
+    elapsed += segment.t;
+  });
 
   const options: ChartOptions<'line'> = {
     responsive: true,

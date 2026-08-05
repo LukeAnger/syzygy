@@ -54,4 +54,9 @@ export interface ParseResult {
   readonly assignments: Assignment[];
   /** Numbers the parser saw but could not attach to any variable. */
   readonly unusedNumbers: number[];
+  /**
+   * The variable the problem asks for, when it asks for one. Absent for a
+   * story that only narrates — the solver then falls back to solving all.
+   */
+  readonly target?: VariableKey;
 }

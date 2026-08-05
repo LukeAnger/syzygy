@@ -15,7 +15,14 @@ import {
   loadEngine,
 } from './engine.ts';
 import { SYSTEM_PROMPT, userPrompt } from './prompt.ts';
-import { extractionToResult, parseExtraction, schemaString } from './schema.ts';
+import {
+  applyTextUnits,
+  dropUngrounded,
+  extractionToResult,
+  isEmptyExtraction,
+  parseExtraction,
+  schemaString,
+} from './schema.ts';
 
 export { isSmartParseSupported, SMART_MODEL };
 export type { LoadProgress };
@@ -40,7 +47,17 @@ export async function smartParse(
     userPrompt(text, system),
     schemaString(),
   );
+  // The model's raw JSON is the only way to tell a bad extraction apart from a
+  // bad downstream transform. Dev-only; stripped from production builds.
+  if (import.meta.env.DEV) console.debug('[smart parse] raw:', json);
   const extraction = parseExtraction(json, system);
   if (!extraction) return null;
-  return extractionToResult(extraction, text);
+  // The story's own units outrank the model's guess about them.
+  const inTextUnits = applyTextUnits(extraction, text);
+  // Values the problem never mentions are copied from the prompt's examples,
+  // not read out of the story. Drop them; if nothing grounded survives, report
+  // failure so the caller falls back to the rule parser.
+  const grounded = dropUngrounded(inTextUnits, text);
+  if (isEmptyExtraction(grounded)) return null;
+  return extractionToResult(grounded, text);
 }

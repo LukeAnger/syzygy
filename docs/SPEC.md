@@ -23,6 +23,14 @@ knows with what they're trying to find.
   Free fall is a preset (`a = −9.81 m/s²`), not the whole product.
 - **Auto-solve-all:** given any 3 of the 5 kinematic variables, solve the rest
   and show a worked tutorial for each.
+- **Answer the question that was asked.** Auto-solve-all is the right default
+  when nobody said what was wanted, but it is not by itself tutoring. Textbook
+  problems ask for one specific quantity, and part of the skill being taught is
+  telling which given values serve that question — problems routinely include a
+  solvable-but-irrelevant value precisely to test that. So the parser reads the
+  question (§4.6), the answer leads the solution, and any given the answer never
+  depended on is named as such. A tutor that silently consumes every given has
+  done that discrimination *for* the student.
 - **Natural-language entry:** type/paste/speak a word problem and have it
   pre-fill the variable form.
 - **Real units** (metric/imperial) via an in-house dimensional-math core.
@@ -127,6 +135,75 @@ this replaces it.
 - **Chart.js** (via `react-chartjs-2`) for the relationship plots.
 - **Zustand** for the small amount of app state.
 - **Design tokens** (CSS custom properties) for the Tron theme — see §9.
+
+### 4.6 The asked-for variable & relevance
+
+Two small pieces turn "solve everything" into "answer the question".
+
+**`nlp/question.ts`** reads what the problem wants — "what is the ball's speed
+when it hits the ground?" ⇒ target `v`. Deliberately a grammar rather than a
+model: the way problems *pose questions* is far more regular than the way they
+narrate scenarios ("find the…", "how fast", "what was the…" is a short closed
+list), and a deterministic mistake is easier to debug than a stochastic one.
+It distinguishes "initial speed" (`v0`) from a bare "speed" (`v`), and takes the
+**last** question when several are asked, since multi-part problems are worked
+in order. A story that only narrates yields no target, and the app falls back to
+solving everything.
+
+**`engine/relevance.ts`** answers "which givens carried this answer?" by walking
+the solution backwards: `SolutionStep` already records the inputs each step
+consumed, so no new bookkeeping is needed. Givens outside that dependency set
+are reported as *given but not needed* — the distractor.
+
+`phaseRelevanceFor` runs the same trace **across segment boundaries**. A value
+that arrived over a link continues the trace in the segment that produced it; a
+value the story stated ends it. Whole segments never reached are ones the
+student did not need. `solvePhases` records that provenance (`inherited`) —
+crucially *excluding* the zero velocity a `rest` link injects, since that is
+supplied by the boundary rather than carried, which is exactly why coming to
+rest severs the dependency on everything before it.
+
+**The reasoning is shown as maths, not prose.** Each boundary renders its own
+condition — `x₁ = x₂` with `v₀ = 0` (rest), `v₀ = v` (continuous) or
+`v₀ = −e·v` (bounce). That *is* the explanation of why an earlier stage does or
+doesn't reach the answer: `v₀ = 0` has no `v` on the right-hand side, so nothing
+about the previous stage's speed can cross it, while `v₀ = v` plainly does.
+
+Deliberately not worded. An earlier version carried hand-written sentences per
+case, which had two problems: a student has to take prose on trust, whereas an
+equation can be checked against the numbers printed beside it; and every new
+situation needs another sentence written by hand. Natural-language explanation
+is a candidate for a future paid AI tier — where a model is generating language
+rather than asserting physics the engine already knows.
+
+An irrelevant segment collapses to a labelled line with its working behind a
+disclosure — collapsed, never hidden, so anyone who wants to check it still can.
+The chart plots only the segments the answer rests on, for the same reason:
+drawing a stage the answer ignores makes it look load-bearing.
+
+This corrects a real regression. Multi-phase initially rendered *every* segment
+at equal prominence, which reproduced the exact failure §2 exists to prevent —
+solving everything instead of answering what was asked — one level up, and
+looked more thorough while teaching less. Two honest limits remain:
+- It reflects the derivation actually shown. Where several routes to the target
+  exist the solver commits to one, and that route is what the student reads.
+- It claims nothing when the target is unsolved; an unfinished derivation is no
+  evidence that anything was unnecessary.
+
+Relevance tracing does **not** catch a distractor of the same *kind* as the real
+value — a problem giving two heights where only the second matters. There the
+parse picks the wrong `x1` before tracing runs, so the trace faithfully reports
+that everything used was needed. That case is handled instead by segmenting the
+story into phases (§4.7): the answer comes from the final segment, which makes
+the earlier height irrelevant structurally rather than by analysis.
+
+### 4.7 Multi-phase motion
+
+`nlp/segment.ts` splits a story into motion segments and `engine/phases.ts`
+solves the sequence; see the Roadmap entry for the model, the link kinds, and
+what remains uncovered. Segmentation is opt-in on evidence — no staging cue, or
+fewer than three distinct heights, and the story is solved as a single segment
+exactly as before.
 
 ---
 
@@ -363,6 +440,86 @@ running entirely in the browser:
   swap. The pure JSON→assignment mapping is unit-tested; on-device inference
   quality must be validated on real hardware (no GPU in CI).
 
+**Extraction quality — measured, not assumed.** The first hardware run
+(SmolLM2-360M, five deliberately hard problems) found the model's language
+handling adequate but its slot discipline weak. Positions were right in 4 of 5,
+including the compositional obstacle case the rule parser cannot do; everything
+else regressed. Two distinct causes, worth keeping separate:
+- *Few-shot copying.* The examples in `prompt.ts` are the model's fallback when
+  it cannot ground a slot. Any slot holding the same value in every example
+  teaches that value as a constant: `t` was `null` throughout and every stated
+  duration was dropped, `units` was `"metric"` throughout and imperial was never
+  detected, and `v0` was never `null`, so problems stating no initial velocity
+  came back with the last example's `20`. The examples now vary every slot and
+  show each as `null` at least once, and use deliberately odd numbers so future
+  copying is identifiable on sight.
+- *A fabricating default.* The "falls to the ground" rule (`x1` known, `x2`
+  absent ⇒ `x2 = 0`) predates smart parse and was being applied to its output.
+  The rule parser has no way to express "the story never says where it ends
+  up"; smart parse does, and a null `x2` is a deliberate statement. The default
+  is now rule-parser only (`statePatch`), covered in `store.test.ts`.
+
+The general lesson, which governs this whole path: **a fabricated value is
+worse than a missing one.** A missing `v0` yields "not enough information to
+solve"; an invented one yields a confident wrong answer with a full worked
+solution behind it. Smart parse only earns its download when it beats the rule
+parser, and inventing values makes it lose.
+
+**Second run — what rewriting the prompt actually proved.** Varying the example
+values did not stop the copying; the model copied the *new* numbers instead
+(`t=3.5`, from an example, onto a problem stating no duration), and on two
+problems put a velocity into the acceleration slot. Three conclusions, each
+turned into a mechanism rather than more prompt wording:
+- *A prompt cannot forbid fabrication; code can.* `dropUngrounded`
+  (`smart/schema.ts`) discards any value whose magnitude appears neither in the
+  problem text nor among the constants a convention supplies (rest, the two
+  gravities). Signs are compared by magnitude so `v=-26` still matches "26 m/s".
+  If nothing grounded survives, smart parse reports failure and the rule parser
+  takes over.
+- *Smart parse must augment the grammar, not replace it.* It previously
+  discarded the rule result entirely, so enabling it could make a story parse
+  *worse*. `mergeParses` now layers the model's assignments over the grammar's,
+  filling only empty slots — rule wins every contested one. Measured on the
+  braking-capsule problem, the grammar alone recovers `v0=-4` (sign included)
+  and `t=6`, the model alone recovers `x1=150` and `a=1.2`; neither solves it
+  and the merge does. This makes enabling smart parse monotonic by
+  construction, which is what §12a always claimed.
+- *A model bump is the last lever, not the first.* Copying and slot confusion
+  look like capability failures, and 360M may well be below the floor — but the
+  point of the two guards above is to make a weak model *safe*, and that claim
+  is only testable with the model held fixed. The default therefore stays at
+  SmolLM2-360M until the guards have been measured on it. Candidates when the
+  time comes are listed in `smart/engine.ts`; Llama-3.2-1B (879 MB) is both
+  larger in parameters and smaller in VRAM than Qwen2.5-0.5B (945 MB), so the
+  0.5B tier is strictly dominated and should be skipped.
+
+The rule-parser baseline on the five-problem set is itself worth recording: it
+extracts *nothing* from three of them and partial values from the other two.
+The grammar is far weaker on unconstrained prose than its curated test corpus
+suggests — which is the case for smart parse, and the reason the NLP standards
+system below matters.
+
+**Third run — the remaining failures were the grammar's, not the model's.** Two
+of five now solve correctly end-to-end, and nothing fabricates. What was left
+turned out to be deterministic work the model had been covering for badly:
+- *Dimensional guard.* The grammar has always refused a number whose unit
+  contradicts the slot it is filling; smart parse had no equivalent, so a model
+  could file "30 m/s" under acceleration. `measuredNumbers` (`grammar.ts`)
+  exposes each number with the dimension of its unit, and `dropUngrounded` now
+  enforces the same rule on the model's output. Both parsers, one standard.
+- *Coverage, not intelligence.* "Slips", "topples", "breaks loose" all mean
+  "started at rest", and "strikes the pavement" means the same as "hits the
+  ground" — prose rarely uses the phrasings the grammar enumerated. Adding
+  rest-implying verbs and ground-level surface names took grammar recall on the
+  corpus from 3/20 to 9/20, and `v0` is now recovered on all five problems by
+  the grammar alone.
+- *The story outranks the model on units.* The tokenizer folds "feet" to `ft`,
+  so the written system is a deterministic fact; `applyTextUnits` uses it to
+  override the model's `units` guess. Gravity has to be *restated* rather than
+  relabelled when the system flips — it is convention-supplied rather than read
+  off the page, so a metric −9.81 would otherwise be reinterpreted as
+  −9.81 ft/s². A stated acceleration is left alone.
+
 **Prompt collection (`src/telemetry/collector.ts`)** — the flywheel that
 improves the *free* rule parser:
 - Storymode submissions (by default only the ones the rule parser couldn't
@@ -425,11 +582,68 @@ Enabled by the layered design; **not** built in v1.
   Storymode text/voice input → parser, KaTeX worked-solution steps, dual-axis
   motion chart. Tron / low-poly theme via design tokens. Verified end-to-end in
   a browser.
-- ✅ Local LLM "smart parse" (WebLLM, opt-in, lazy-loaded, rule-parser
-  fallback) + prompt-collection flywheel (consent-gated, endpoint via env).
-  Pure glue unit-tested; on-device inference validated on real hardware.
-- ⬜ NLP standards system (labeled phrase corpus + precision/recall) — the
-  collected prompts feed this.
+- ✅ Prompt-collection flywheel (consent-gated, endpoint via env).
+- ⬜ Local LLM "smart parse" (WebLLM, opt-in, lazy-loaded, rule-parser
+  fallback). Shipped and unit-tested at the glue layer, but **not** yet good
+  enough to recommend: the first hardware run showed few-shot copying into
+  unstated slots and a fabricated ground landing (see §12a). Prompt and
+  `statePatch` fixed in response; needs a re-test, and possibly a larger model
+  than 360M.
+- 🟡 NLP standards system (labeled phrase corpus + precision/recall) — seeded.
+  `src/nlp/corpus.ts` holds labeled prose problems with a parser-agnostic
+  scorer; `corpus.test.ts` scores the grammar on every run and ratchets a
+  no-regression floor. Standing score: **9 of 20 labeled slots (45% recall),
+  zero fabrications** — up from 3/20 when the corpus was first written, entirely
+  through grammar coverage the corpus made visible. Still needed: many more
+  cases, and a scored harness for smart parse (hand-run, since CI has no
+  WebGPU). The collected prompts feed this.
 - ⬜ Ingest endpoint + batch rule-suggestion pipeline (out of static-app scope).
+- 🟢 **Multi-phase motion.** *"Drops off a roof at 150 m onto another roof 30 m
+  high, then rolls off and falls to the ground — how fast is it going when it
+  hits?"* is two falls with the ball at rest between them, and the answer uses
+  only the 30 m. A single-segment model returns −54.2 m/s instead of −24.3, and
+  reports the real value as unplaced: the exact student error the problem is
+  built to catch. Four stages, one done:
+  - ✅ **Engine** (`engine/phases.ts`). A phase sequence is a list of segments
+    joined by links. Position always carries (`x₂(n) = x₁(n+1)`); velocity
+    carries by `LinkKind` — `continuous` (passes and keeps going), `rest`
+    (lands, later departs from rest), `reversed` (bounces, scaled by
+    restitution). Propagation runs both ways, so a sequence stating only its
+    final conditions can be worked backwards. `solve` is untouched — this is
+    the same constraint propagation one level up, iterated to a fixpoint. A
+    one-segment sequence behaves exactly as a bare `solve`, so the old model is
+    the degenerate case rather than a special case. Boundaries whose two sides
+    are separately stated and disagree are reported once per channel instead of
+    being silently reconciled.
+  - ✅ **NLP segmentation** (`nlp/segment.ts`). Heights in order of mention form
+    a chain and consecutive pairs become phases, which resolves the awkward part
+    — `30` is simultaneously phase 1's `x₂` and phase 2's `x₁`, and falls out of
+    the chain rather than needing to be decided. The words *between* two heights
+    classify the boundary: "rolls off"/"lands on"/"comes to rest" ⇒ `rest`,
+    "bounces" ⇒ `reversed`, "passes"/"continues" ⇒ `continuous`. Splitting is
+    opt-in on evidence: without a staging cue, or with fewer than three distinct
+    heights, it returns null and the story is solved exactly as before. A wrong
+    split silently answers a different problem, so ambiguity declines rather
+    than guesses.
+  - ✅ **Targeting & rendering.** The asked-for variable resolves against the
+    final segment, and the Solution panel renders one block per phase. That
+    layout *is* the explanation: seeing the answer come from the last segment
+    alone is what makes an earlier height visibly irrelevant.
+  - ✅ **Editing & the honest fallback** (`ui/components/PhaseEditor.tsx`). The
+    phase sequence is held as display strings, not parser quantities, so it is
+    editable on the same terms as the variable form — §4.4 makes the manual form
+    the ground truth and the parser a pre-fill, and phases were briefly an
+    exception, which left a mis-segmented story unfixable. Heights and link
+    kinds are editable, segments can be added or removed, and "+ Split into
+    phases" works from a *single*-segment story, which is the escape hatch for
+    staged problems the parser cannot segment at all. Removing down to one
+    segment collapses back to the ordinary path. `describesStages` detects
+    staged prose independently of whether it could be split, so a story that
+    signposts stages but yields no chain says so instead of answering as if it
+    were one segment.
+
+  Not yet covered: chains the parser can't read (unstated intermediate heights,
+  horizontal stages, staging without a cue word). Those are warned about and can
+  be split by hand, but are not detected automatically.
 - ⬜ Polish: bundle code-splitting (chart.js/KaTeX are heavy), interactive
   (Socratic) tutor phase, additional domains.

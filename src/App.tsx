@@ -1,5 +1,11 @@
 import { useMemo } from 'react';
-import { type Mode, solveInputs, useKinematicsStore } from './state/index.ts';
+import {
+  type Mode,
+  solveInputs,
+  solvePhaseSequence,
+  useKinematicsStore,
+} from './state/index.ts';
+import { phaseRelevanceFor } from './engine/index.ts';
 import { Header } from './ui/components/Header.tsx';
 import { VariableForm } from './ui/components/VariableForm.tsx';
 import { Storymode } from './ui/components/Storymode.tsx';
@@ -17,11 +23,34 @@ export default function App() {
   const setMode = useKinematicsStore((s) => s.setMode);
   const inputs = useKinematicsStore((s) => s.inputs);
   const unitSystem = useKinematicsStore((s) => s.unitSystem);
+  // Only Storymode carries a question; the manual form has no prose to ask one.
+  const asked = useKinematicsStore((s) => (s.mode === 'story' ? s.asked : undefined));
+  const given = useKinematicsStore((s) => s.given);
+  const phases = useKinematicsStore((s) => s.phases);
 
   const result = useMemo(
     () => solveInputs(inputs, unitSystem),
     [inputs, unitSystem],
   );
+
+  // Only Storymode can describe staged motion; the manual form is one segment
+  // by construction.
+  const phaseResult = useMemo(
+    () =>
+      mode === 'story' && phases
+        ? solvePhaseSequence(phases, inputs, unitSystem)
+        : undefined,
+    [mode, phases, inputs, unitSystem],
+  );
+
+  // Chart only the motion the answer rests on. Plotting a stage the answer
+  // ignores makes it look load-bearing, which is the opposite of the lesson.
+  const charted = useMemo(() => {
+    if (!phaseResult) return [result];
+    if (!asked || !phases) return phaseResult.phases;
+    const relevance = phaseRelevanceFor(asked, phaseResult, phases.links);
+    return relevance.needed.map((i) => phaseResult.phases[i]!);
+  }, [phaseResult, result, asked, phases]);
 
   return (
     <div className={styles.app}>
@@ -45,8 +74,18 @@ export default function App() {
           {mode === 'story' ? <Storymode /> : <VariableForm result={result} />}
         </div>
         <div className={styles.right}>
-          <Solution result={result} unitSystem={unitSystem} />
-          <MotionChart result={result} unitSystem={unitSystem} />
+          <Solution
+            result={result}
+            unitSystem={unitSystem}
+            asked={asked}
+            given={given}
+            phaseResult={phaseResult}
+            phaseLinks={phases?.links}
+          />
+          <MotionChart
+            results={charted}
+            unitSystem={unitSystem}
+          />
         </div>
       </div>
     </div>
