@@ -165,29 +165,38 @@ function buildCase(rng, index) {
   const bank =
     release === 'up' ? RELEASE_UPWARD : release === 'down' ? RELEASE_DOWNWARD : RELEASE_AT_REST;
   const releaseTpl = pick(bank);
+  const usedTemplates = { release: releaseTpl };
   const clauses = [fill(releaseTpl, subs)];
 
   // Add a height clause only when the release phrasing didn't carry one.
   if (x1 !== null && !releaseTpl.includes('{n}')) {
-    clauses.push(fill(pick(HEIGHT_CLAUSE), subs));
+    const heightTpl = pick(HEIGHT_CLAUSE);
+    usedTemplates.height = heightTpl;
+    clauses.push(fill(heightTpl, subs));
   }
 
   if (landing === 'raised' && x2) {
-    clauses.push(
-      fill(pick(LAND_RAISED), { ...subs, plat: landingPlatform, n: num(x2, u.length) }),
-    );
+    const landTpl = pick(LAND_RAISED);
+    usedTemplates.landing = landTpl;
+    clauses.push(fill(landTpl, { ...subs, plat: landingPlatform, n: num(x2, u.length) }));
   } else if (x2 === 0) {
-    clauses.push(fill(pick(LAND_GROUND), subs));
+    const landTpl = pick(LAND_GROUND);
+    usedTemplates.landing = landTpl;
+    clauses.push(fill(landTpl, subs));
   }
 
   // At most one derived quantity is stated, so rounding can't make the problem
   // contradict itself.
   const extra = x2 === null ? 'time' : pick(['none', 'none', 'time', 'speed']);
   if (extra === 'time') {
-    clauses.push(fill(pick(x2 === null ? TIME_ONGOING : TIME_STATED), subs));
+    const timeTpl = pick(x2 === null ? TIME_ONGOING : TIME_STATED);
+    usedTemplates.time = timeTpl;
+    clauses.push(fill(timeTpl, subs));
     expected.t = [t, 's'];
   } else if (extra === 'speed') {
-    clauses.push(fill(pick(SPEED_STATED), { ...subs, v: num(Math.abs(v), u.velocity) }));
+    const speedTpl = pick(SPEED_STATED);
+    usedTemplates.speed = speedTpl;
+    clauses.push(fill(speedTpl, { ...subs, v: num(Math.abs(v), u.velocity) }));
     expected.v = [v, u.velocity];
   }
 
@@ -238,6 +247,7 @@ function buildCase(rng, index) {
     distractors,
     asked: asked === 'none' ? null : asked,
     tags: { system, release, landing, extra, hasDistractor: distractors.length > 0 },
+    templates: usedTemplates,
   };
 }
 
