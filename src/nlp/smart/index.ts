@@ -14,7 +14,8 @@ import {
   isSmartParseSupported,
   loadEngine,
 } from './engine.ts';
-import { SYSTEM_PROMPT, userPrompt } from './prompt.ts';
+import { SYSTEM_PROMPT, examplesBlock, userPrompt } from './prompt.ts';
+import { type Example, buildIdf, selectExamples } from './retrieve.ts';
 import {
   applyTextUnits,
   dropUngrounded,
@@ -32,6 +33,26 @@ export async function warmUp(onProgress?: LoadProgress): Promise<void> {
   await loadEngine(onProgress);
 }
 
+/** Bank plus its IDF, built once and reused for the rest of the session. */
+let bank: Promise<{ examples: Example[]; idf: Map<string, number> }> | null = null;
+
+/**
+ * The examples closest to this problem.
+ *
+ * The bank is imported dynamically so it lands in the lazy smart-parse chunk
+ * rather than the base bundle — a user who never enables smart parse should
+ * never download 175 KB of worked examples. Scoring it is cheap, but the IDF
+ * pass over the whole bank is not, so both are memoised.
+ */
+async function nearestExamples(text: string): Promise<Example[]> {
+  bank ??= import('./examples.json').then((module) => {
+    const examples = module.default as Example[];
+    return { examples, idf: buildIdf(examples) };
+  });
+  const { examples, idf } = await bank;
+  return selectExamples(text, examples, 4, idf);
+}
+
 /**
  * Parse a word problem with the local model. Falls back to `null` if the model
  * returns unusable output, so the caller can drop back to the rule parser.
@@ -43,7 +64,7 @@ export async function smartParse(
   const engine = await loadEngine();
   const json = await generateExtraction(
     engine,
-    SYSTEM_PROMPT,
+    SYSTEM_PROMPT + examplesBlock(await nearestExamples(text)),
     userPrompt(text, system),
     schemaString(),
   );

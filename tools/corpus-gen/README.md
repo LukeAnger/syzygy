@@ -16,8 +16,16 @@ scope, so it carries none of the app's build or lint constraints.
 ## Usage
 
 ```bash
-npm run corpus:generate -- --count 1200 --seed 1
+npm run corpus:generate -- --count 1200 --seed 1   # the corpus
+npm run corpus:examples                            # the retrieval bank
+npm run corpus:report                              # corpus/report.md
 ```
+
+`corpus:examples` distils the corpus into `src/nlp/smart/examples.json`, the
+bank smart parse retrieves few-shot examples from. That file *is* shipped, but
+only in the lazy smart-parse chunk (165 KB, 20 KB gzipped) — a user who never
+enables smart parse never downloads it. Regenerate it whenever the corpus
+changes.
 
 Deterministic: same seed, same corpus, so scores are comparable across runs.
 The artifact is committed, so CI does not depend on regenerating it.

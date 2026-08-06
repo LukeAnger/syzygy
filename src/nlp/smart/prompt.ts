@@ -21,6 +21,7 @@
  * wording here need only make the right answer easy, not police the wrong one.
  */
 import type { UnitSystem } from '../../math/index.ts';
+import type { Example } from './retrieve.ts';
 
 export const SYSTEM_PROMPT = `You extract the known quantities from a 1-D free-fall / kinematics word problem.
 
@@ -47,25 +48,23 @@ Apply the conventions first: they supply v0=0 and the gravity value even when th
 Every number you output must appear in the problem itself or come from a convention above. Never carry one over from the examples.
 
 Do not solve anything. Only report what the problem states.
+`;
 
-Examples:
-Problem: "A ball is dropped from a height of 45 m"
-{"x1":45,"x2":0,"v0":0,"v":null,"a":-9.81,"t":null,"units":"metric"}
-
-Problem: "A ball is dropped from a platform 100 m up and lands on a truck that is 4 m tall"
-{"x1":100,"x2":4,"v0":0,"v":null,"a":-9.81,"t":null,"units":"metric"}
-
-Problem: "A stone is thrown upward at 14 m/s and hits the ground at 26 m/s"
-{"x1":null,"x2":0,"v0":14,"v":-26,"a":-9.81,"t":null,"units":"metric"}
-
-Problem: "A brick topples off a ledge 62 ft above the pavement"
-{"x1":62,"x2":0,"v0":0,"v":null,"a":-32.17,"t":null,"units":"imperial"}
-
-Problem: "A lift passing a marker 80 m up is already moving down at 6 m/s when its brakes apply a steady 2 m/s^2 for 5 seconds"
-{"x1":80,"x2":null,"v0":-6,"v":null,"a":2,"t":5,"units":"metric"}
-
-Problem: "A ball passes a window 25 m above the street and reaches the pavement 3.5 s later"
-{"x1":25,"x2":0,"v0":null,"v":null,"a":-9.81,"t":3.5,"units":"metric"}`;
+/**
+ * The worked examples, rendered ahead of the problem.
+ *
+ * Retrieved per problem rather than fixed, because a small model imitates its
+ * examples far more readily than it follows instructions. Six generic cases
+ * cannot resemble arbitrary input; the nearest few out of hundreds usually can,
+ * which turns the copying into the mechanism instead of the defect.
+ */
+export function examplesBlock(examples: readonly Example[]): string {
+  if (examples.length === 0) return '';
+  const rendered = examples
+    .map((e) => `Problem: "${e.text}"\n${JSON.stringify(e.extraction)}`)
+    .join('\n\n');
+  return `\n\nExamples:\n${rendered}`;
+}
 
 export function userPrompt(text: string, system: UnitSystem): string {
   return `Unit system: ${system}\nProblem: "${text.trim()}"\nJSON:`;
