@@ -277,6 +277,44 @@ export function mergeParses(rule: ParseResult, smart: ParseResult): ParseResult 
   };
 }
 
+/**
+ * What the last parse actually did, split by which engine did it.
+ *
+ * The merge deliberately gives the grammar priority, so as the grammar improves
+ * the model's contribution shrinks — and a story can parse perfectly while
+ * smart parse contributes nothing at all. Without separating the two, "it
+ * works" says nothing about whether the model earned its download.
+ */
+export interface ParseDiagnostics {
+  readonly engine: 'rule' | 'smart';
+  /** Variables the grammar supplied on its own. */
+  readonly fromRule: VariableKey[];
+  /** Variables only the model supplied — its entire marginal value. */
+  readonly fromSmart: VariableKey[];
+  readonly unusedNumbers: number[];
+  readonly asked?: VariableKey;
+  readonly phaseCount: number;
+}
+
+function diagnose(
+  engine: 'rule' | 'smart',
+  rule: ParseResult,
+  merged: ParseResult,
+): ParseDiagnostics {
+  const fromRule = rule.assignments.map((a) => a.variable as VariableKey);
+  const claimed = new Set<VariableKey>(fromRule);
+  return {
+    engine,
+    fromRule,
+    fromSmart: merged.assignments
+      .map((a) => a.variable as VariableKey)
+      .filter((key) => !claimed.has(key)),
+    unusedNumbers: merged.unusedNumbers,
+    asked: merged.target as VariableKey | undefined,
+    phaseCount: segmentPhases(merged.text)?.phases.length ?? 1,
+  };
+}
+
 /** Free-fall acceleration as an input string, in each system's own unit. */
 const FREE_FALL: Record<UnitSystem, string> = {
   metric: '-9.81',
@@ -375,6 +413,8 @@ export interface KinematicsState {
   phases?: PhaseState;
   /** Story signposts stages the parser could not turn into a phase chain. */
   unsegmentedStages: boolean;
+  /** What the last parse did, per engine. Drives the dev panel. */
+  diagnostics?: ParseDiagnostics;
   /** Opt-in local-LLM parsing. */
   smartEnabled: boolean;
   smartStatus: SmartStatus;
@@ -447,7 +487,11 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
     // A story written in feet is an imperial problem: solve *and* display it
     // that way, rather than silently converting the answer to metres.
     const system = detectSystem(text) ?? state.unitSystem;
-    set({ ...statePatch(system, text, result), unitSystem: system });
+    set({
+      ...statePatch(system, text, result),
+      unitSystem: system,
+      diagnostics: diagnose('rule', result, result),
+    });
     maybeCollect(text, result, 'rule', state.shareConsent);
   },
 
@@ -459,9 +503,14 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
         if (smart) {
           // The grammar is the floor, not the alternative — smart parse only
           // fills what it left empty.
-          const result = mergeParses(parse(text), smart);
+          const rule = parse(text);
+          const result = mergeParses(rule, smart);
           const system = detectSystem(text) ?? state.unitSystem;
-          set({ ...statePatch(system, text, result), unitSystem: system });
+          set({
+            ...statePatch(system, text, result),
+            unitSystem: system,
+            diagnostics: diagnose('smart', rule, result),
+          });
           maybeCollect(text, result, 'smart', get().shareConsent);
           return;
         }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import {
   type Mode,
   solveInputs,
@@ -12,6 +12,12 @@ import { Storymode } from './ui/components/Storymode.tsx';
 import { Solution } from './ui/components/Solution.tsx';
 import { MotionChart } from './ui/components/MotionChart.tsx';
 import styles from './App.module.css';
+
+// Lazy behind a statically-false flag in production, so the whole dev panel —
+// and the corpus it imports — is dropped from the bundle rather than hidden.
+const DevPanel = import.meta.env.DEV
+  ? lazy(() => import('./ui/components/DevPanel.tsx'))
+  : null;
 
 const MODES: { id: Mode; label: string }[] = [
   { id: 'story', label: 'Storymode' },
@@ -88,6 +94,12 @@ export default function App() {
           />
         </div>
       </div>
+
+      {DevPanel && (
+        <Suspense fallback={null}>
+          <DevPanel />
+        </Suspense>
+      )}
     </div>
   );
 }

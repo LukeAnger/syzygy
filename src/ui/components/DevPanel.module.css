@@ -1,0 +1,125 @@
+/* Deliberately unglamorous and out of the way — this is instrumentation, and
+   it must not read as part of the product. */
+.panel {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: 50;
+  max-width: min(46rem, 100vw);
+  max-height: 70vh;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  background: rgba(5, 7, 10, 0.96);
+  border-top: 1px solid var(--panel-edge);
+  border-right: 1px solid var(--panel-edge);
+}
+
+.toggle {
+  display: block;
+  padding: 0.3rem 0.7rem;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  color: var(--accent);
+}
+
+.body {
+  padding: 0 0.9rem 0.9rem;
+}
+
+.label {
+  margin: 0.8rem 0 0.4rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.chip {
+  padding: 0.2rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--panel-edge-strong);
+  color: var(--text-bright);
+}
+
+.rows {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 0.2rem 0.8rem;
+  margin: 0;
+}
+
+.rows dt {
+  color: var(--text-dim);
+}
+
+.rows dd {
+  margin: 0;
+  color: var(--text-bright);
+  overflow-wrap: anywhere;
+}
+
+.good {
+  color: var(--good);
+}
+
+/* The model added nothing. Not an error — but the fact worth seeing. */
+.none {
+  color: var(--text-dim);
+}
+
+.warn {
+  color: var(--accent-2);
+}
+
+.note {
+  color: var(--text-dim);
+}
+
+.raw {
+  display: block;
+  padding: 0.3rem 0.45rem;
+  background: var(--bg);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  color: var(--good);
+  overflow-wrap: anywhere;
+}
+
+.examples {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text);
+}
+
+.examples li {
+  margin-bottom: 0.15rem;
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-dim);
+}

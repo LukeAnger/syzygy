@@ -33,6 +33,29 @@ export async function warmUp(onProgress?: LoadProgress): Promise<void> {
   await loadEngine(onProgress);
 }
 
+/**
+ * What the last smart parse actually did. Dev builds only.
+ *
+ * The retrieved examples matter as much as the raw output: if the model got a
+ * problem wrong, the first question is whether it was shown anything resembling
+ * it. Nothing reads this in production, and `import.meta.env.DEV` is replaced
+ * with `false` at build time so the writes disappear with it.
+ */
+export interface SmartRun {
+  readonly text: string;
+  /** Untouched model output, before any guard has run. */
+  readonly raw: string;
+  /** The examples it was shown, nearest last. */
+  readonly examples: string[];
+  readonly ms: number;
+}
+
+let lastRun: SmartRun | null = null;
+
+export function lastSmartRun(): SmartRun | null {
+  return lastRun;
+}
+
 /** Bank plus its IDF, built once and reused for the rest of the session. */
 let bank: Promise<{ examples: Example[]; idf: Map<string, number> }> | null = null;
 
@@ -62,15 +85,25 @@ export async function smartParse(
   system: UnitSystem,
 ): Promise<ParseResult | null> {
   const engine = await loadEngine();
+  const started = performance.now();
+  const examples = await nearestExamples(text);
   const json = await generateExtraction(
     engine,
-    SYSTEM_PROMPT + examplesBlock(await nearestExamples(text)),
+    SYSTEM_PROMPT + examplesBlock(examples),
     userPrompt(text, system),
     schemaString(),
   );
   // The model's raw JSON is the only way to tell a bad extraction apart from a
   // bad downstream transform. Dev-only; stripped from production builds.
-  if (import.meta.env.DEV) console.debug('[smart parse] raw:', json);
+  if (import.meta.env.DEV) {
+    lastRun = {
+      text,
+      raw: json,
+      examples: examples.map((e) => e.text),
+      ms: Math.round(performance.now() - started),
+    };
+    console.debug('[smart parse] raw:', json);
+  }
   const extraction = parseExtraction(json, system);
   if (!extraction) return null;
   // The story's own units outrank the model's guess about them.
