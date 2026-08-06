@@ -24,8 +24,12 @@ interface SpeechRecognitionLike {
 }
 
 export function Storymode() {
-  const [text, setText] = useState('');
   const [listening, setListening] = useState(false);
+  // The draft lives in the store so anything can load a problem into the box —
+  // the worked examples, dictation, the dev panel's one-click buttons.
+  const text = useKinematicsStore((s) => s.draft);
+  const setText = useKinematicsStore((s) => s.setDraft);
+  const solving = useKinematicsStore((s) => s.solving);
   const submitStory = useKinematicsStore((s) => s.submitStory);
   const unusedNumbers = useKinematicsStore((s) => s.unusedNumbers);
 
@@ -76,10 +80,12 @@ export function Storymode() {
       />
       <button
         type="button"
-        className={styles.solve}
+        className={`${styles.solve} ${solving ? styles.solving : ''}`}
         onClick={() => void submitStory(text)}
+        disabled={solving || text.trim() === ''}
+        aria-busy={solving}
       >
-        Solve
+        {solving ? 'Solving…' : 'Solve'}
       </button>
 
       <SmartParseControl />

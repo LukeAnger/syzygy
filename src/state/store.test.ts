@@ -174,6 +174,47 @@ describe('store: the question the story asks', () => {
   });
 });
 
+describe('store: draft and solving state', () => {
+  beforeEach(() => {
+    useKinematicsStore.getState().reset();
+    vi.mocked(smartParse).mockReset();
+  });
+
+  it('loads a problem into the box without submitting it', () => {
+    useKinematicsStore.getState().setDraft('a ball is dropped from 45 m');
+    expect(useKinematicsStore.getState().draft).toBe('a ball is dropped from 45 m');
+    expect(useKinematicsStore.getState().story).toBe('');
+  });
+
+  it('puts submitted text in the box, so it stays visible and editable', async () => {
+    await useKinematicsStore.getState().submitStory('dropped from 45 m');
+    expect(useKinematicsStore.getState().draft).toBe('dropped from 45 m');
+  });
+
+  it('is not solving once a parse settles', async () => {
+    await useKinematicsStore.getState().submitStory('dropped from 45 m');
+    expect(useKinematicsStore.getState().solving).toBe(false);
+  });
+
+  /** A stuck spinner would be worse than none — the button never re-enables. */
+  it('stops solving even when smart parse throws', async () => {
+    vi.mocked(smartParse).mockRejectedValue(new Error('gpu exploded'));
+    await useKinematicsStore.getState().enableSmart();
+    await useKinematicsStore.getState().submitStory('dropped from 45 m');
+
+    expect(useKinematicsStore.getState().solving).toBe(false);
+    // And it still fell through to the grammar rather than giving up.
+    expect(useKinematicsStore.getState().inputs.x1).toBe('45');
+  });
+
+  it('clears both on reset', async () => {
+    await useKinematicsStore.getState().submitStory('dropped from 45 m');
+    useKinematicsStore.getState().reset();
+    expect(useKinematicsStore.getState().draft).toBe('');
+    expect(useKinematicsStore.getState().solving).toBe(false);
+  });
+});
+
 describe('store: staged motion', () => {
   beforeEach(() => useKinematicsStore.getState().reset());
 

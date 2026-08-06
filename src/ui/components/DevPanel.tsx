@@ -43,6 +43,8 @@ const label = (id: string) => id.replace(/-/g, ' ');
 export default function DevPanel() {
   const [open, setOpen] = useState(false);
   const submitStory = useKinematicsStore((s) => s.submitStory);
+  const setDraft = useKinematicsStore((s) => s.setDraft);
+  const solving = useKinematicsStore((s) => s.solving);
   const diagnostics = useKinematicsStore((s) => s.diagnostics);
   const story = useKinematicsStore((s) => s.story);
   const phases = useKinematicsStore((s) => s.phases);
@@ -59,7 +61,7 @@ export default function DevPanel() {
         className={styles.toggle}
         onClick={() => setOpen((v) => !v)}
       >
-        {open ? '▾' : '▸'} dev tools
+        {open ? '▾' : '▸'} dev tools{solving ? ' · solving…' : ''}
       </button>
 
       {open && (
@@ -72,7 +74,13 @@ export default function DevPanel() {
                 type="button"
                 className={styles.chip}
                 title={p.text}
-                onClick={() => void submitStory(p.text)}
+                disabled={solving}
+                // Fills the box as well as solving, so the problem stays
+                // visible and editable rather than vanishing into a result.
+                onClick={() => {
+                  setDraft(p.text);
+                  void submitStory(p.text);
+                }}
               >
                 {label(p.id)}
               </button>

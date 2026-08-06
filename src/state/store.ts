@@ -415,6 +415,18 @@ export interface KinematicsState {
   unsegmentedStages: boolean;
   /** What the last parse did, per engine. Drives the dev panel. */
   diagnostics?: ParseDiagnostics;
+  /**
+   * The text in the Storymode box, before it is submitted.
+   *
+   * Held here rather than in the component so anything can load a problem into
+   * it — the dev panel's one-click buttons, the worked examples, dictation.
+   */
+  draft: string;
+  /**
+   * A parse is in flight. Smart parse runs a local model and takes seconds, so
+   * without this the app looks frozen and invites a second click.
+   */
+  solving: boolean;
   /** Opt-in local-LLM parsing. */
   smartEnabled: boolean;
   smartStatus: SmartStatus;
@@ -429,6 +441,7 @@ export interface KinematicsState {
   setUnitSystem(system: UnitSystem): void;
   /** Parse with whichever engine is active (rule, or smart when ready). */
   submitStory(text: string): Promise<void>;
+  setDraft(draft: string): void;
   loadStory(text: string): void;
   enableSmart(): Promise<void>;
   disableSmart(): void;
@@ -452,6 +465,8 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   inputs: DEFAULT_INPUTS,
   unitSystem: 'metric',
   story: '',
+  draft: '',
+  solving: false,
   given: [],
   unusedNumbers: [],
   asked: undefined,
@@ -466,6 +481,8 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   collectorConfigured: COLLECTOR_CONFIGURED,
 
   setMode: (mode) => set({ mode }),
+
+  setDraft: (draft) => set({ draft }),
 
   setInput: (key, value) =>
     set((state) => ({ inputs: { ...state.inputs, [key]: value } })),
@@ -497,28 +514,34 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
 
   submitStory: async (text) => {
     const state = get();
-    if (state.smartEnabled && state.smartStatus === 'ready') {
-      try {
-        const smart = await smartParse(text, state.unitSystem);
-        if (smart) {
-          // The grammar is the floor, not the alternative — smart parse only
-          // fills what it left empty.
-          const rule = parse(text);
-          const result = mergeParses(rule, smart);
-          const system = detectSystem(text) ?? state.unitSystem;
-          set({
-            ...statePatch(system, text, result),
-            unitSystem: system,
-            diagnostics: diagnose('smart', rule, result),
-          });
-          maybeCollect(text, result, 'smart', get().shareConsent);
-          return;
+    set({ draft: text, solving: true });
+    try {
+      if (state.smartEnabled && state.smartStatus === 'ready') {
+        try {
+          const smart = await smartParse(text, state.unitSystem);
+          if (smart) {
+            // The grammar is the floor, not the alternative — smart parse only
+            // fills what it left empty.
+            const rule = parse(text);
+            const result = mergeParses(rule, smart);
+            const system = detectSystem(text) ?? state.unitSystem;
+            set({
+              ...statePatch(system, text, result),
+              unitSystem: system,
+              diagnostics: diagnose('smart', rule, result),
+            });
+            maybeCollect(text, result, 'smart', get().shareConsent);
+            return;
+          }
+        } catch {
+          /* fall through to the always-available rule parser */
         }
-      } catch {
-        /* fall through to the always-available rule parser */
       }
+      get().loadStory(text);
+    } finally {
+      // Always clears, so a failed parse cannot leave the button spinning.
+      set({ solving: false });
     }
-    get().loadStory(text);
   },
 
   enableSmart: async () => {
@@ -608,10 +631,13 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
     set({
       inputs: DEFAULT_INPUTS,
       story: '',
+      draft: '',
+      solving: false,
       given: [],
       unusedNumbers: [],
       asked: undefined,
-  phases: undefined,
-  unsegmentedStages: false,
+      phases: undefined,
+      unsegmentedStages: false,
+      diagnostics: undefined,
     }),
 }));
