@@ -81,7 +81,7 @@ describe('rule-parser standing score', () => {
 });
 
 /**
- * Labeled slots the grammar currently recovers: 9 of 20 (45%).
+ * Labeled slots the grammar currently recovers: 15 of 20 (75%).
  * 3/20 → 7/20 with rest-implying verbs ("slips", "breaks loose", "topples")
  * and impact-against-a-named-surface velocity phrases; 7/20 → 9/20 once
  * landing at a *named* ground-level surface ("strikes the pavement", "into the
@@ -89,4 +89,4 @@ describe('rule-parser standing score', () => {
  * Raise this when the grammar genuinely improves; never lower it to make a
  * change pass.
  */
-const RULE_PARSER_FLOOR = 9;
+const RULE_PARSER_FLOOR = 15;

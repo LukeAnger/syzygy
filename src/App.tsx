@@ -33,6 +33,11 @@ export default function App() {
   const asked = useKinematicsStore((s) => (s.mode === 'story' ? s.asked : undefined));
   const given = useKinematicsStore((s) => s.given);
   const phases = useKinematicsStore((s) => s.phases);
+  // Only meaningful when the parser could not split a staged story *and* has
+  // no phase sequence to fall back on.
+  const staged = useKinematicsStore(
+    (s) => s.mode === 'story' && s.unsegmentedStages && !s.phases,
+  );
 
   const result = useMemo(
     () => solveInputs(inputs, unitSystem),
@@ -87,6 +92,7 @@ export default function App() {
             given={given}
             phaseResult={phaseResult}
             phaseLinks={phases?.links}
+            staged={staged}
           />
           <MotionChart
             results={charted}

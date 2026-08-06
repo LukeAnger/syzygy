@@ -130,7 +130,7 @@ describe('synthetic corpus', () => {
  * it most likely means someone sourced phrasings from `grammar.ts`, and the
  * corpus has quietly become a mirror.
  */
-const SYNTHETIC_FLOOR = 0.48;
+const SYNTHETIC_FLOOR = 0.59;
 
 /**
  * Cases the grammar answers with a wrong value rather than none. Only ever

@@ -25,6 +25,8 @@ interface SolutionProps {
   phaseResult?: PhaseSolveResult;
   /** Boundary kinds, needed to explain why a segment doesn't matter. */
   phaseLinks?: PhaseLink[];
+  /** Story stages itself but could not be segmented — the answer is untrustworthy. */
+  staged?: boolean;
 }
 
 /** The worked steps of one solve, KaTeX-typeset. */
@@ -126,6 +128,7 @@ export function Solution({
   given,
   phaseResult,
   phaseLinks,
+  staged = false,
 }: SolutionProps) {
   const multi = phaseResult && phaseResult.phases.length > 1;
   // The story ends where the last segment ends, so that is where an answer
@@ -151,13 +154,67 @@ export function Solution({
     : result.steps.length === 0;
 
   if (empty) {
+    // Acceleration is always present as the free-fall default, so it doesn't
+    // count as something the user supplied.
+    const supplied = SUMMARY_VARIABLES.filter((key) => key !== 'a' && knowns[key]);
     return (
       <section className={styles.panel}>
         <h2 className={styles.title}>Solution</h2>
-        <p className={styles.empty}>
-          Enter three known variables (or describe a problem in Storymode) and
-          the worked solution appears here.
-        </p>
+        {supplied.length === 0 ? (
+          <p className={styles.empty}>
+            Enter three known variables (or describe a problem in Storymode) and
+            the worked solution appears here.
+          </p>
+        ) : (
+          // Something *was* understood, it just isn't enough. Saying so beats
+          // the blank prompt, which reads as "nothing happened" and gives no
+          // hint that the parser got halfway.
+          <div className={styles.stalled}>
+            <p className={styles.stalledLead}>
+              Not enough to solve yet — kinematics needs three known values and
+              this has {supplied.length === 1 ? 'only one' : `only ${supplied.length}`}.
+            </p>
+            <p className={styles.stalledDetail}>
+              Understood so far:{' '}
+              {supplied.map((key, i) => (
+                <span key={key}>
+                  {i > 0 && ', '}
+                  <Katex tex={symbolLatex(key)} /> ={' '}
+                  {formatVar(key, knowns[key]!, unitSystem)}
+                </span>
+              ))}
+              . Add another value below, or rephrase the part it missed.
+            </p>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  // A story that stages itself but could not be split describes different
+  // motion from the one being solved. Leading with a confident number here is
+  // the same failure as inventing a value: it looks like an answer.
+  if (staged) {
+    return (
+      <section className={styles.panel}>
+        <h2 className={styles.title}>Solution</h2>
+        <div className={styles.stalled}>
+          <p className={styles.stalledLead}>
+            This problem describes more than one stage of motion, and the values
+            couldn&rsquo;t be split into segments.
+          </p>
+          <p className={styles.stalledDetail}>
+            Anything solved here would treat the whole thing as a single fall,
+            which answers a different question. Split it into phases below to
+            model each stage.
+          </p>
+        </div>
+        <details className={styles.working}>
+          <summary className={styles.workingToggle}>
+            Show what a single-stage reading gives
+          </summary>
+          <Steps result={result} unitSystem={unitSystem} />
+        </details>
       </section>
     );
   }

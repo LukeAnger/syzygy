@@ -146,7 +146,11 @@ function numberRule(
   description: string,
   phrases: string[][],
   spec: SlotSpec,
-  window = 3,
+  // Six, not three: "from a scaffold plank 24 m" puts the number four tokens
+  // past the cue, and three silently missed every phrasing with a noun phrase
+  // in between. Safe to widen because every match still has to carry a
+  // dimension-compatible unit.
+  window = 6,
 ): Rule {
   return {
     id,
@@ -191,6 +195,70 @@ function numberRule(
           });
         }
       }
+      return matches;
+    },
+  };
+}
+
+/**
+ * A rule for numbers that come *before* their cue.
+ *
+ * Every other rule reads "trigger, then number" — "from a height of 45 m". But
+ * heights are just as often written the other way round: "24 m off the ground",
+ * "40 feet above the lawn", "150 m above the shaft floor". No amount of prefix
+ * phrases reaches those, because the words that identify the slot only arrive
+ * after the value.
+ *
+ * Requires an explicit, dimension-matching unit, so a bare number followed by
+ * "above" can't be captured by accident.
+ */
+/** Words that mean what follows is where the object *ends up*, not where it began. */
+const LANDING_CUES = ['onto', 'lands', 'settles', 'stops', 'perched', 'resting'];
+
+function postfixNumberRule(
+  id: string,
+  description: string,
+  suffixes: string[][],
+  spec: SlotSpec,
+): Rule {
+  return {
+    id,
+    description,
+    match(tokens) {
+      const matches: SlotMatch[] = [];
+      tokens.forEach((token, i) => {
+        if (token.kind !== 'number' || token.value === undefined) return;
+        const unitToken = tokens[i + 1];
+        const unit =
+          unitToken && unitToken.kind === 'word' ? UNITS[unitToken.text] : undefined;
+        if (!unit || !dimensionsEqual(unit.dimension, spec.dimension)) return;
+
+        // "3 m above the ground" is a start height when it describes the
+        // object and a landing height when it describes what the object lands
+        // on — identical wording, opposite slots. Looking back for a landing
+        // cue is the only thing that separates them.
+        const precedingLanding = tokens
+          .slice(Math.max(0, i - 6), i)
+          .some((t) => t.kind === 'word' && LANDING_CUES.includes(t.text));
+        if (precedingLanding) return;
+
+        for (const suffix of suffixes) {
+          if (!phraseAt(tokens, i + 2, suffix)) continue;
+          const endToken = i + 1 + suffix.length;
+          matches.push({
+            ruleId: id,
+            variable: spec.variable,
+            quantity: fromUnit(applySign(token.value, spec.sign), unit),
+            startToken: i,
+            endToken,
+            source: tokens
+              .slice(i, endToken + 1)
+              .map((t) => t.text)
+              .join(' '),
+          });
+          return;
+        }
+      });
       return matches;
     },
   };
@@ -392,6 +460,7 @@ export const RULES: Rule[] = [
       ['height', 'of'],
       ['at', 'a', 'height', 'of'],
       ['from', 'the', 'top', 'of'],
+      ['at', 'the', 'top', 'of'],
       ['from', 'a', 'platform'],
       ['from', 'a', 'building'],
       ['from', 'a', 'cliff'],
@@ -403,6 +472,27 @@ export const RULES: Rule[] = [
     'x1-distance',
     'starting height N (explicit unit required)',
     [['from'], ['dropped', 'from'], ['falls'], ['drops'], ['fell'], ['falling']],
+    {
+      variable: 'x1',
+      dimension: LENGTH,
+      defaultUnit: METRE,
+      sign: 'positive',
+      requireExplicitUnit: true,
+    },
+  ),
+  // Listed after the prefix height rules: the parser keeps the first match per
+  // variable, so this only fires when nothing else claimed x₁.
+  postfixNumberRule(
+    'x1-postfix',
+    'starting height stated before its cue (N m above/off the ...)',
+    [
+      ['above'],
+      ['off', 'the'],
+      ['up'],
+      ['overhead'],
+      ['high', 'up'],
+      ['mark'],
+    ],
     {
       variable: 'x1',
       dimension: LENGTH,
@@ -428,6 +518,9 @@ export const RULES: Rule[] = [
       ['on', 'a', 'table'],
       ['on', 'a', 'shelf'],
       ['on', 'a', 'ledge', 'that', 'is'],
+      ['that', 'stands'],
+      ['whose', 'top', 'is'],
+      ['standing'],
     ],
     {
       variable: 'x2',
@@ -445,9 +538,14 @@ export const RULES: Rule[] = [
     'x2-ground',
     'lands at ground level (x₂ = 0)',
     [
-      ['to', 'the', 'ground'],
-      ['on', 'the', 'ground'],
       ...GROUND_SURFACES.flatMap((surface) => [
+        // Preposition + surface, with no verb enumerated. "Comes to rest on
+        // the sand" and "settles on the grass" then work without either verb
+        // being listed. Height references ("above the ground", "off the
+        // ground") are deliberately excluded — those state a start, not a
+        // landing, and matching them would fabricate x2 = 0.
+        ['on', 'the', surface],
+        ['to', 'the', surface],
         ['hits', 'the', surface],
         ['strikes', 'the', surface],
         ['reaches', 'the', surface],
@@ -467,6 +565,12 @@ export const RULES: Rule[] = [
       ['accelerates', 'at'],
       ['acceleration', 'of'],
       ['at', 'an', 'acceleration', 'of'],
+      ['decelerates', 'at'],
+      ['decelerates', 'it', 'at'],
+      ['decelerating', 'at'],
+      ['slows', 'at'],
+      ['at', 'a', 'steady'],
+      ['at', 'a', 'constant'],
     ],
     { variable: 'a', dimension: ACCELERATION, defaultUnit: METRE_PER_SECOND_SQUARED, sign: 'signed' },
   ),

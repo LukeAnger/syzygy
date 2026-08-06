@@ -241,3 +241,26 @@
   letter-spacing: 0.1em;
   color: var(--text-dim);
 }
+
+/* Parsed something, but not enough to solve — or solved the wrong problem.
+   Either way it must not look like an answer. */
+.stalled {
+  padding: 0.9rem 1rem;
+  border: var(--edge);
+  border-left: 2px solid var(--accent-2);
+  border-radius: var(--radius);
+  background: rgba(255, 106, 0, 0.04);
+}
+
+.stalledLead {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--accent-2);
+}
+
+.stalledDetail {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text);
+}
