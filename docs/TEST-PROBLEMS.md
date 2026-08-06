@@ -13,7 +13,9 @@ Copy a block, paste it into Storymode, hit **Solve**. With smart parse on, open
 the browser console — `[smart parse] raw:` prints the model's actual JSON, which
 is the only way to tell a bad extraction from a bad transform.
 
-Problems 1–5 are machine-scored in `src/nlp/corpus.ts`.
+Problems 1–5 are machine-scored in `src/nlp/corpus.ts`. For a step-by-step
+procedure — including how to measure whether smart parse contributes anything —
+see [TEST-CHECKLIST.md](TEST-CHECKLIST.md).
 
 ---
 
