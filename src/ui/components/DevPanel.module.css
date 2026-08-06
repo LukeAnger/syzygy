@@ -15,20 +15,26 @@
   border-right: 1px solid var(--panel-edge);
 }
 
+/* Legible enough to find, still obviously not part of the product. The first
+   version used --text-dim on near-black and was effectively invisible. */
 .toggle {
   display: block;
-  padding: 0.3rem 0.7rem;
-  background: none;
+  width: 100%;
+  padding: 0.45rem 0.9rem;
+  background: var(--accent-2);
   border: none;
-  color: var(--text-dim);
+  color: #05070a;
   font-family: inherit;
-  font-size: inherit;
-  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: left;
   cursor: pointer;
 }
 
 .toggle:hover {
-  color: var(--accent);
+  filter: brightness(1.15);
 }
 
 .body {

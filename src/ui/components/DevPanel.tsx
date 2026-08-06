@@ -59,7 +59,7 @@ export default function DevPanel() {
         className={styles.toggle}
         onClick={() => setOpen((v) => !v)}
       >
-        {open ? '▾' : '▸'} dev
+        {open ? '▾' : '▸'} dev tools
       </button>
 
       {open && (
@@ -114,7 +114,7 @@ export default function DevPanel() {
 
           <div className={styles.label}>Smart parse internals</div>
           {run && run.text === story ? (
-            <div className={styles.rows}>
+            <dl className={styles.rows}>
               <dt>raw output</dt>
               <dd>
                 <code className={styles.raw}>{run.raw || '(empty)'}</code>
@@ -130,7 +130,7 @@ export default function DevPanel() {
                 </ol>
                 <span className={styles.note}>nearest last</span>
               </dd>
-            </div>
+            </dl>
           ) : (
             <p className={styles.empty}>
               {smartStatus === 'ready'
