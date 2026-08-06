@@ -11,6 +11,7 @@ import { VariableForm } from './ui/components/VariableForm.tsx';
 import { Storymode } from './ui/components/Storymode.tsx';
 import { Solution } from './ui/components/Solution.tsx';
 import { MotionChart } from './ui/components/MotionChart.tsx';
+import { WorkItThrough } from './ui/components/WorkItThrough.tsx';
 import styles from './App.module.css';
 
 // Lazy behind a statically-false flag in production, so the whole dev panel —
@@ -35,6 +36,8 @@ export default function App() {
   const phases = useKinematicsStore((s) => s.phases);
   // Only meaningful when the parser could not split a staged story *and* has
   // no phase sequence to fall back on.
+  const tutorEnabled = useKinematicsStore((s) => s.tutorEnabled);
+  const story = useKinematicsStore((s) => s.story);
   const staged = useKinematicsStore(
     (s) => s.mode === 'story' && s.unsegmentedStages && !s.phases,
   );
@@ -85,6 +88,15 @@ export default function App() {
           {mode === 'story' ? <Storymode /> : <VariableForm result={result} />}
         </div>
         <div className={styles.right}>
+          {/* Keyed on the story so the questions reset for each new problem
+              rather than staying answered from the last one. */}
+          <WorkItThrough
+            key={story}
+            asked={tutorEnabled && mode === 'story' ? asked : undefined}
+            given={given}
+            result={result}
+            unitSystem={unitSystem}
+          >
           <Solution
             result={result}
             unitSystem={unitSystem}
@@ -94,6 +106,7 @@ export default function App() {
             phaseLinks={phases?.links}
             staged={staged}
           />
+          </WorkItThrough>
           <MotionChart
             results={charted}
             unitSystem={unitSystem}

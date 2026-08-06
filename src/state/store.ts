@@ -427,6 +427,13 @@ export interface KinematicsState {
    * without this the app looks frozen and invites a second click.
    */
   solving: boolean;
+  /**
+   * Ask the student to read the problem before showing the answer.
+   *
+   * Kept in the store, not the component, so the choice survives moving
+   * between problems the way the smart-parse toggle does.
+   */
+  tutorEnabled: boolean;
   /** Opt-in local-LLM parsing. */
   smartEnabled: boolean;
   smartStatus: SmartStatus;
@@ -455,6 +462,7 @@ export interface KinematicsState {
   removePhase(index: number): void;
   /** Abandon the phase split and solve as one segment. */
   clearPhases(): void;
+  setTutorEnabled(on: boolean): void;
   setShareConsent(consent: boolean): void;
   loadFreeFall(): void;
   reset(): void;
@@ -472,6 +480,7 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   asked: undefined,
   phases: undefined,
   unsegmentedStages: false,
+  tutorEnabled: false,
   smartEnabled: false,
   smartStatus: isSmartParseSupported() ? 'idle' : 'unsupported',
   smartProgress: 0,
@@ -621,6 +630,8 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
     }),
 
   clearPhases: () => set({ phases: undefined, unsegmentedStages: false }),
+
+  setTutorEnabled: (on) => set({ tutorEnabled: on }),
 
   setShareConsent: (consent) => set({ shareConsent: consent }),
 

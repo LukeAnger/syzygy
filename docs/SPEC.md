@@ -645,5 +645,22 @@ Enabled by the layered design; **not** built in v1.
   Not yet covered: chains the parser can't read (unstated intermediate heights,
   horizontal stages, staging without a cue word). Those are warned about and can
   be split by hand, but are not detected automatically.
+- 🟡 **Socratic layer.** §1 calls this a tutor rather than a solver, but the
+  app only ever *told*. `tutor/grade.ts` plus `WorkItThrough` ask two questions
+  before revealing a solution: what the problem wants, and which given values
+  the answer needs. Both are graded against machinery that already exists and
+  is already tested — `nlp/question.ts` and `engine/relevance.ts` — so the
+  tutor introduces no new source of wrongness and needs no model.
+
+  The second question is the point. The app used to *tell* a student that
+  150 m never enters the answer; asking first turns a spoiler into an exercise,
+  and turns the distractor work into the thing it was built for. Wrong answers
+  are marked in amber, not red — a wrong first guess is the mechanism working.
+  "Skip to the answer" is always present: a student who wants the answer should
+  get it rather than be held hostage.
+
+  Still to come: which equation to use (checkable against the first solution
+  step's `equationId`), phase-level questions for staged motion, and any notion
+  of progress across problems.
 - ⬜ Polish: bundle code-splitting (chart.js/KaTeX are heavy), interactive
   (Socratic) tutor phase, additional domains.

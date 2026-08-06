@@ -31,6 +31,8 @@ export function Storymode() {
   const setText = useKinematicsStore((s) => s.setDraft);
   const solving = useKinematicsStore((s) => s.solving);
   const submitStory = useKinematicsStore((s) => s.submitStory);
+  const tutorEnabled = useKinematicsStore((s) => s.tutorEnabled);
+  const setTutorEnabled = useKinematicsStore((s) => s.setTutorEnabled);
   const unusedNumbers = useKinematicsStore((s) => s.unusedNumbers);
 
   const speech = window as unknown as SpeechWindow;
@@ -87,6 +89,19 @@ export function Storymode() {
       >
         {solving ? 'Solving…' : 'Solve'}
       </button>
+
+      <label className={styles.tutorToggle}>
+        <input
+          type="checkbox"
+          checked={tutorEnabled}
+          onChange={(e) => setTutorEnabled(e.target.checked)}
+        />
+        <span>Work it through</span>
+        <span className={styles.tutorNote}>
+          Asks what the problem wants and which values matter before showing the
+          answer.
+        </span>
+      </label>
 
       <SmartParseControl />
 

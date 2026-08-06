@@ -1,0 +1,145 @@
+.panel {
+  padding: 1.2rem 1.4rem;
+  border: var(--edge);
+  border-radius: var(--radius);
+  background: var(--panel);
+  clip-path: var(--clip-corner);
+}
+
+.title {
+  margin: 0 0 0.9rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.question {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+  color: var(--text-bright);
+}
+
+.hint {
+  margin: 0 0 0.9rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.choice {
+  min-width: 3.2rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--bg);
+  border: var(--edge);
+  border-radius: var(--radius);
+  color: var(--text-bright);
+  cursor: pointer;
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--panel-edge-strong);
+  box-shadow: var(--glow);
+}
+
+.choice:disabled {
+  cursor: default;
+}
+
+.right {
+  border-color: var(--good);
+  color: var(--good);
+}
+
+.wrong {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  cursor: pointer;
+  color: var(--text-bright);
+}
+
+.value {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.feedbackRight,
+.feedbackWrong {
+  margin-bottom: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.feedbackRight {
+  border: 1px solid var(--good);
+  background: rgba(56, 249, 176, 0.05);
+  color: var(--text-bright);
+}
+
+/* Wrong is orange, not red. A wrong first guess is the mechanism working, not
+   a failure to scold. */
+.feedbackWrong {
+  border: 1px solid var(--accent-2);
+  background: rgba(255, 106, 0, 0.05);
+  color: var(--text);
+}
+
+.line {
+  margin: 0 0 0.4rem;
+}
+
+.next {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  background: none;
+  border: 1px solid var(--panel-edge-strong);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.next:hover {
+  box-shadow: var(--glow);
+}
+
+/* Always available. A student who wants the answer should be able to get it. */
+.skip {
+  display: block;
+  margin-top: 0.7rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.skip:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
