@@ -36,6 +36,17 @@ const EXTRA: { id: string; text: string }[] = [
     text: 'a ball falls 40 m and then rolls off and hits the ground',
   },
   { id: 'plain-drop', text: 'A ball is dropped from a height of 45 m' },
+  // For "Work it through": both ask a question and offer a real choice.
+  // Verified with the relevance trace — the brick's two heights genuinely do
+  // not enter v, since v = v0 + at needs only the duration.
+  {
+    id: 'tutor-all-needed',
+    text: 'A ball is dropped from a height of 45 m. How fast is it going when it lands?',
+  },
+  {
+    id: 'tutor-two-distractors',
+    text: 'A brick is dropped from 80 m onto a shed 5 m tall and takes 3.9 s. How fast is it moving when it lands?',
+  },
 ];
 
 const label = (id: string) => id.replace(/-/g, ' ');
