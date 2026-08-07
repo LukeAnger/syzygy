@@ -43,6 +43,23 @@ const EXTRA: { id: string; text: string }[] = [
     id: 'tutor-all-needed',
     text: 'A ball is dropped from a height of 45 m. How fast is it going when it lands?',
   },
+  // Relative velocity, from a standard problem set.
+  {
+    id: 'rv-two-vehicles',
+    text:
+      'A motorcycle traveling on the highway at a speed of 120 km/h passes a ' +
+      'car traveling at a speed of 90 km/h. From the point of view of a ' +
+      'passenger on the car, what is the velocity of the motorcycle?',
+  },
+  // Known gap: needs "straight up" read as v_a = 0, and "relative to the
+  // truck" to outrank word order in deciding which body is which.
+  {
+    id: 'rv-inferred-zero',
+    text:
+      'A ball is kicked off the back of a pickup truck traveling at 50 km/h. A ' +
+      'pedestrian on the ground sees the ball hit the pavement and then bounce ' +
+      'straight up. What was the velocity of the ball relative to the truck?',
+  },
   {
     id: 'tutor-two-distractors',
     text: 'A brick is dropped from 80 m onto a shed 5 m tall and takes 3.9 s. How fast is it moving when it lands?',

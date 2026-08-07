@@ -136,6 +136,58 @@ Deliberately written in loose student prose ("thats", no comma splices tidied)
 
 ---
 
+## Relative velocity
+
+From a standard problem set, which turned out to be a useful scope check: of
+seven problems on the page, **one is solvable today and five need capabilities
+the app does not have**. Relative velocity as taught is largely a 2-D vector
+topic; the `relative-velocity` pack is 1-D.
+
+### RV1. Two vehicles, one overtaking
+
+```text
+A motorcycle traveling on the highway at a speed of 120 km/h passes a car traveling at a speed of 90 km/h. From the point of view of a passenger on the car, what is the velocity of the motorcycle?
+```
+
+**Answer: 30 km/h.** Works end to end — domain detected, both speeds read
+positionally, `asked` resolved to `v_rel`, answer rendered in km/h.
+
+### RV2. Inferring a zero velocity
+
+```text
+A ball is kicked off the back of a pickup truck traveling at 50 km/h. A pedestrian on the ground sees the ball hit the pavement and then bounce straight up. What was the velocity of the ball relative to the truck?
+```
+
+**Answer: 50 km/h, opposite to the truck's travel.** In scope in principle —
+one dimension, two bodies — but it needs two things the parser cannot do:
+
+- **A velocity stated in words, not numbers.** "Bounce straight up" means the
+  ball has *no horizontal velocity relative to the ground*, so `v_a = 0`. The
+  only number in the problem belongs to the other body.
+- **The question naming which body is which.** "Velocity of the ball relative
+  to the truck" makes the truck the reference frame, so it is body B — but the
+  truck is mentioned *first*, and the positional rule would make it body A and
+  invert the answer.
+
+That second one is the tractable half, and general: "velocity of X relative to
+Y" appears in most problems of this kind, and it should outrank word order.
+
+### Out of scope
+
+| Problem | Needs |
+|---|---|
+| Duck crossing a flowing river | 2-D vector addition; answer is 2.5 m/s at ~53° downstream |
+| "Why take off into the wind?" | conceptual — no quantities at all |
+| Newspaper delivery angle | 2-D, solving for an angle |
+| Hockey puck aiming angle | 2-D, solving for an angle |
+| Scotch yoke sliding velocity | rotational kinematics, ω and linkage geometry |
+
+Four of the five want the same thing: **velocities as 2-D vectors**, with
+addition and an angle as an answer. That is a domain, not a rule — the math
+core already carries dimensions but every quantity is a scalar.
+
+---
+
 ## Reading the results
 
 A **missing** value is far better than an **invented** one. Missing degrades to
