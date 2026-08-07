@@ -71,6 +71,13 @@
   color: var(--text-bright);
 }
 
+/* What a group of buttons is expected to do, when that needs saying. */
+.groupNote {
+  margin: 0.3rem 0 0;
+  color: var(--text-dim);
+  font-size: 0.65rem;
+}
+
 .rows {
   display: grid;
   grid-template-columns: 8rem 1fr;
