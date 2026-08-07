@@ -632,3 +632,44 @@ describe('store: reading a two-body story', () => {
     expect(state.unsegmentedStages).toBe(false);
   });
 });
+
+describe('store: gravity is not assumed everywhere', () => {
+  beforeEach(() => {
+    useKinematicsStore.getState().reset();
+    vi.mocked(smartParse).mockReset();
+  });
+
+  it('assumes free fall for a falling object', () => {
+    useKinematicsStore.getState().loadStory('A ball is dropped from a height of 45 m');
+    expect(useKinematicsStore.getState().inputs.a).toBe('-9.81');
+  });
+
+  /**
+   * The reason the gate exists. This story has a final speed and a duration,
+   * which with gravity in the form is enough to close the system — so the app
+   * used to answer it: the car started at 79 m/s, decelerated under gravity and
+   * covered 272.6 m, worked solution and all. Now `a` is blank and it correctly
+   * runs out of information.
+   */
+  it('does not put gravity into a car accelerating along a road', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory('A car reaches 30 m/s in 5 s. How far does it travel?');
+    const state = useKinematicsStore.getState();
+
+    expect(state.inputs.a).toBe('');
+    const solved = solveInputs(state.inputs, state.unitSystem, state.domain);
+    expect(solved.knowns['dx']).toBeUndefined();
+  });
+
+  it('reports nothing understood for a story with no physics in it', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory(
+        'In a skills competition, a hockey player is skating across the ice at ' +
+          'a velocity Vh and tries to hit a target with the puck.',
+      );
+    const inputs = useKinematicsStore.getState().inputs;
+    expect(Object.values(inputs).every((v) => v === '')).toBe(true);
+  });
+});

@@ -21,6 +21,7 @@ const LINK_LABELS: ReadonlyArray<readonly [LinkKind, string]> = [
  */
 export function PhaseEditor() {
   const phases = useKinematicsStore((s) => s.phases);
+  const inputs = useKinematicsStore((s) => s.inputs);
   const unitSystem = useKinematicsStore((s) => s.unitSystem);
   const displayUnits = useKinematicsStore((s) => s.displayUnits);
   // The story's own units, so a field reads back what was typed.
@@ -36,6 +37,10 @@ export function PhaseEditor() {
   if (!story) return null;
 
   const unit = unitSymbol('x1', kit);
+  // "The answer below" has to actually be there. A story the parser read almost
+  // nothing from shows this warning next to an empty Solution panel, and
+  // pointing at an answer that was never produced reads as a second failure.
+  const solvable = Object.values(inputs).filter((v) => v.trim() !== '').length >= 2;
 
   // Nothing staged and nothing detected: offer the split rather than showing
   // an empty editor on every ordinary problem.
@@ -45,8 +50,10 @@ export function PhaseEditor() {
         {unsegmentedStages && (
           <p className={styles.warn}>
             This problem describes more than one stage of motion, but the values
-            couldn't be split into segments — the answer below treats it as one.
-            Split it manually to model each stage.
+            couldn&rsquo;t be split into segments
+            {solvable
+              ? " — the answer below treats it as one. Split it manually to model each stage."
+              : '. Split it manually to model each stage, or fill the values in below.'}
           </p>
         )}
         <button type="button" className={styles.add} onClick={addPhase}>

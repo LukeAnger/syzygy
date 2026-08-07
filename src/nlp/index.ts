@@ -6,4 +6,5 @@ export * from './parse.ts';
 export * from './question.ts';
 export * from './segment.ts';
 export * from './domain.ts';
+export * from './free-fall.ts';
 export * from './display-units.ts';

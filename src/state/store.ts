@@ -36,6 +36,7 @@ import {
   type Assignment,
   type ParseResult,
   type Segmentation,
+  describesFreeFall,
   describesStages,
   detectDisplayUnits,
   detectDomain,
@@ -462,8 +463,20 @@ function statePatch(
     // left a = −32.17 ft/s² behind, and the next metric story inherited it as
     // −9.805416 m/s² — close enough to −9.81 to pass a glance, and wrong.
     // Only kinematics has an acceleration to default; other packs start blank.
+    //
+    // And only when the story is actually about something falling. It used to
+    // apply to every kinematics story, which put gravity into problems that had
+    // none. A puck sliding across ice reported free fall as the only thing it
+    // had understood; worse, "a car reaches 30 m/s in 5 s, how far does it
+    // travel?" had a duration and a final speed, so gravity closed the system
+    // and it answered — the car started at 79 m/s, decelerated under gravity,
+    // and covered 272.6 m, with a full worked solution behind it.
     inputs: (kinematic
-      ? { ...DEFAULT_INPUTS, a: FREE_FALL[system], ...parsed }
+      ? {
+          ...DEFAULT_INPUTS,
+          a: describesFreeFall(text) ? FREE_FALL[system] : '',
+          ...parsed,
+        }
       : { ...blankInputs(domain), ...parsed }) as Inputs,
   };
 }
