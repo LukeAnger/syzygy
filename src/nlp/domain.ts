@@ -13,11 +13,12 @@
  * that falls back to kinematics.
  */
 import { measuredNumbers } from './grammar.ts';
+import { MEDIUM_CUES, isCrossing } from './grammar-2d.ts';
 import { defaultTokenizer } from './tokenizer.ts';
 import { VELOCITY, dimensionsEqual } from '../math/index.ts';
 import type { Token } from './types.ts';
 
-export type DomainId = 'kinematics-1d' | 'relative-velocity';
+export type DomainId = 'kinematics-1d' | 'relative-velocity' | 'relative-velocity-2d';
 
 /**
  * Wording that only makes sense with two moving bodies, or with a frame of
@@ -61,6 +62,31 @@ function velocityCount(tokens: Token[]): number {
 }
 
 /**
+ * Two dimensions, on the same two-bar principle as the one above.
+ *
+ * The bars are a moving medium and a crossing, and they have to appear
+ * together. Either alone is common in problems that are not planar at all:
+ * "ignore wind resistance" is a stock phrase in free fall, and "walks across
+ * the room" is a stock phrase in anything. Together they are close to
+ * diagnostic — a current *and* something getting to the other side is a river
+ * problem.
+ *
+ * A stated speed is required as well, because a planar problem with no speed in
+ * it has nothing for this domain to do; the extra bar costs nothing and keeps
+ * scene-setting prose out.
+ *
+ * Checked before the 1-D relative test on purpose. A river problem often says
+ * "relative to the shore" too, and it would otherwise be read as motion along a
+ * line — which is the confidently-wrong outcome this ordering exists to avoid.
+ */
+function isPlanar(tokens: Token[]): boolean {
+  const medium = tokens.some((_, i) =>
+    MEDIUM_CUES.some((cue) => phraseAt(tokens, i, cue)),
+  );
+  return isCrossing(tokens) && medium && velocityCount(tokens) >= 1;
+}
+
+/**
  * The domain a story belongs to.
  *
  * Relative velocity requires *both* a two-body cue and at least two stated
@@ -72,6 +98,7 @@ function velocityCount(tokens: Token[]): number {
  */
 export function detectDomain(text: string): DomainId {
   const tokens = defaultTokenizer.tokenize(text);
+  if (isPlanar(tokens)) return 'relative-velocity-2d';
   const hasCue = tokens.some((_, i) =>
     RELATIVE_CUES.some((cue) => phraseAt(tokens, i, cue)),
   );

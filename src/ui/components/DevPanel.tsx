@@ -64,6 +64,25 @@ const EXTRA: { id: string; text: string }[] = [
     id: 'tutor-two-distractors',
     text: 'A brick is dropped from 80 m onto a shed 5 m tall and takes 3.9 s. How fast is it moving when it lands?',
   },
+  // The two river archetypes, side by side. Worth one click each precisely
+  // because they are hard to tell apart by eye: if a change ever makes the
+  // second read like the first, the answer stays plausible and stops being
+  // right, which is the failure mode that is hardest to notice by hand.
+  {
+    id: 'rv2d-duck-drift',
+    text:
+      'A duck swims at a constant speed from one side of a river to the other ' +
+      'side in a time of 4 seconds. The river is 6 meters wide and it is ' +
+      'flowing at a speed of 2 m/s. What is the velocity of the duck and what ' +
+      'is its direction of travel, with respect to ground?',
+  },
+  {
+    id: 'rv2d-swimmer-compensating',
+    text:
+      'A swimmer who can swim at 1.2 m/s must head upstream to land directly ' +
+      'opposite across a river 30 m wide flowing at 0.5 m/s. At what angle ' +
+      'must she head?',
+  },
 ];
 
 const label = (id: string) => id.replace(/-/g, ' ');

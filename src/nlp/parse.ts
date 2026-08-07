@@ -12,16 +12,14 @@ import type { Assignment, ParseResult, SlotMatch, Tokenizer } from './types.ts';
 import { defaultTokenizer } from './tokenizer.ts';
 import { RULES } from './grammar.ts';
 import { RELATIVE_RULES } from './grammar-relative.ts';
+import { PLANAR_RULES } from './grammar-2d.ts';
 import type { DomainId } from '../domains/index.ts';
 
 /** Which rule set reads a story, by domain. */
 const RULES_FOR: Record<DomainId, typeof RULES> = {
   'kinematics-1d': RULES,
   'relative-velocity': RELATIVE_RULES,
-  // No prose rules yet: 2-D problems state directions in words ("straight
-  // across", "downstream") that nothing here can turn into an angle. Manual
-  // entry works; Storymode will report it read nothing rather than guess.
-  'relative-velocity-2d': [],
+  'relative-velocity-2d': PLANAR_RULES,
 };
 import { detectQuestion } from './question.ts';
 

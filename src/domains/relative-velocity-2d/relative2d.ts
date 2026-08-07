@@ -20,15 +20,30 @@
  * degrees are the display unit. Deliberately *not* "degrees from north" or
  * "downstream of straight across" — those are per-problem conventions, and
  * baking one in would silently misread every problem using another.
+ *
+ * One orientation choice *is* baked in: +y points the way the first body is
+ * going, so `v1y` is never negative. It is needed because the interesting
+ * question — "at what angle must she head to land directly opposite?" — gives a
+ * magnitude and one component, and `y = ±√(|v|² − x²)` has two answers that no
+ * equation can choose between. Every planar problem can be set up this way, so
+ * the assumption costs nothing and it is what lets those problems finish. It
+ * prunes rather than forbids: a `v1y` that some *other* equation determines
+ * negative still stands, because the solver keeps raw roots when a constraint
+ * leaves none.
  */
 import {
   DIMENSIONLESS,
+  LENGTH,
+  TIME,
   VELOCITY,
   add,
   atan2,
   cos,
+  divide,
   hypot,
   multiply,
+  negate,
+  otherLeg,
   sin,
   subtract,
   type Quantity,
@@ -75,10 +90,11 @@ const VR: VectorKeys = { x: 'vrx', y: 'vry', mag: 'vr', dir: 'thr', sub: 'R' };
  * Written as a factory because all three vectors obey them identically; three
  * hand-copied sets would be three chances to typo a sign.
  *
- * Note what is deliberately missing: recovering a direction from a magnitude
- * and a single component. `cos θ = x / |v|` has two solutions and nothing here
- * can choose between them, so those forms return null and the solver looks for
- * another route rather than guessing a quadrant.
+ * Five, not four: the last recovers the y-component from the magnitude and the
+ * x-component, which is the step a compensation problem turns on. It offers
+ * *both* roots and lets the solver's own constraint machinery pick, rather than
+ * returning one and calling it the answer — so when the orientation rule above
+ * does not apply, the ambiguity is still visible instead of resolved by fiat.
  */
 function vectorEquations(v: VectorKeys): Equation[] {
   const s = v.sub;
@@ -139,7 +155,67 @@ function vectorEquations(v: VectorKeys): Equation[] {
         );
       },
     },
+    {
+      id: `${s}-leg`,
+      latex: `v_{${s}y} = \\pm\\sqrt{|v_{${s}}|^2 - v_{${s}x}^2}`,
+      variables: [v.y, v.mag, v.x],
+      solveFor(target, k) {
+        if (target !== v.y) return null;
+        const leg = otherLeg(need(k, v.mag), need(k, v.x));
+        // A component longer than the magnitude describes no vector.
+        if (leg === null) return null;
+        return one(
+          [leg, negate(leg)],
+          `v_{${s}y} = \\pm\\sqrt{|v_{${s}}|^2 - v_{${s}x}^2}`,
+          [v.mag, v.x],
+        );
+      },
+    },
   ];
+}
+
+/**
+ * Displacement over time, per axis.
+ *
+ * Crossing problems state a distance and a duration rather than a speed — "6 m
+ * wide, crossed in 4 s" is how the across-component is given, and without this
+ * the two numbers have nowhere to go. Applies to the resultant, since a
+ * displacement measured on the ground is what a bystander sees.
+ */
+function displacementEquation(axis: 'x' | 'y'): Equation {
+  const sKey = axis === 'x' ? 'sx' : 'sy';
+  const vKey = axis === 'x' ? VR.x : VR.y;
+  const latex = `s_${axis} = v_{R${axis}} \\, t`;
+  return {
+    id: `disp-${axis}`,
+    latex,
+    variables: [sKey, vKey, 't'],
+    solveFor(target, k) {
+      switch (target) {
+        case sKey:
+          return one([multiply(need(k, vKey), need(k, 't'))], latex, [vKey, 't']);
+        case vKey: {
+          const t = need(k, 't');
+          if (t.value === 0) return null;
+          return one(
+            [divide(need(k, sKey), t)],
+            `v_{R${axis}} = \\frac{s_${axis}}{t}`,
+            [sKey, 't'],
+          );
+        }
+        case 't': {
+          const v = need(k, vKey);
+          if (v.value === 0) return null;
+          return one([divide(need(k, sKey), v)], `t = \\frac{s_${axis}}{v_{R${axis}}}`, [
+            sKey,
+            vKey,
+          ]);
+        }
+        default:
+          return null;
+      }
+    },
+  };
 }
 
 /** Componentwise composition: the whole point of the domain. */
@@ -183,9 +259,26 @@ const direction = (key: VariableKey, symbol: string, latex: string): Variable =>
   displayUnit: (kit) => kit.angle,
 });
 
+const displacement = (key: VariableKey, symbol: string, latex: string): Variable => ({
+  key,
+  symbol,
+  latex,
+  dimension: LENGTH,
+  displayUnit: (kit) => kit.length,
+});
+
 export const variables: Variable[] = [
   component('v1x', 'v₁ₓ', 'v_{1x}'),
-  component('v1y', 'v₁ᵧ', 'v_{1y}'),
+  {
+    ...component('v1y', 'v₁ᵧ', 'v_{1y}'),
+    // The orientation choice, and the only one. See the note at the top: it
+    // exists to break the ± tie when a heading is recovered from a magnitude
+    // and one component, and it prunes rather than forbids.
+    physical: {
+      accepts: (q: Quantity) => q.value >= -1e-9,
+      reason: '+y is the direction of travel, so the across-component is never negative',
+    },
+  },
   component('v1', '|v₁|', '|v_1|'),
   direction('th1', 'θ₁', '\\theta_1'),
 
@@ -198,6 +291,22 @@ export const variables: Variable[] = [
   component('vry', 'v_Ry', 'v_{Ry}'),
   component('vr', '|v_R|', '|v_R|'),
   direction('thr', 'θ_R', '\\theta_R'),
+
+  // How far the resultant carries the body, and over how long. A river's width
+  // and the time to cross are stated far more often than the speed itself.
+  displacement('sx', 'sₓ', 's_x'),
+  displacement('sy', 'sᵧ', 's_y'),
+  {
+    key: 't',
+    symbol: 't',
+    latex: 't',
+    dimension: TIME,
+    displayUnit: (kit) => kit.time,
+    physical: {
+      accepts: (q: Quantity) => q.value >= -1e-9,
+      reason: 'time cannot run backwards',
+    },
+  },
 ];
 
 export const relativeVelocity2D: Domain = {
@@ -207,6 +316,8 @@ export const relativeVelocity2D: Domain = {
   equations: [
     compositionEquation('x'),
     compositionEquation('y'),
+    displacementEquation('x'),
+    displacementEquation('y'),
     ...vectorEquations(V1),
     ...vectorEquations(V2),
     ...vectorEquations(VR),

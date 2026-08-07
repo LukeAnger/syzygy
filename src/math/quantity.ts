@@ -184,6 +184,30 @@ export function hypot(x: Quantity, y: Quantity): Quantity {
   return quantity(Math.hypot(x.value, y.value), x.dimension);
 }
 
+/**
+ * The other leg of a right triangle, given the hypotenuse and one leg.
+ *
+ * The inverse of `hypot`, and the reason it is separate: it can fail. A leg
+ * longer than the hypotenuse describes no triangle, so this returns null rather
+ * than NaN — a caller that forgets to check gets a type error instead of a
+ * quantity that poisons everything downstream.
+ *
+ * The sign is caller's business. Both `+` and `-` are valid legs; this returns
+ * the positive one and whoever knows the orientation decides.
+ */
+export function otherLeg(hypotenuse: Quantity, leg: Quantity): Quantity | null {
+  if (!compatible(hypotenuse, leg)) {
+    throw new DimensionError(
+      'otherLeg needs matching dimensions',
+      hypotenuse.dimension,
+      leg.dimension,
+    );
+  }
+  const square = hypotenuse.value ** 2 - leg.value ** 2;
+  if (square < 0) return null;
+  return quantity(Math.sqrt(square), hypotenuse.dimension);
+}
+
 export function compatible(a: Quantity, b: Quantity): boolean {
   return dimensionsEqual(a.dimension, b.dimension);
 }

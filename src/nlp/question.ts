@@ -17,6 +17,7 @@
 import type { VariableKey } from '../engine/index.ts';
 import type { DomainId } from '../domains/index.ts';
 import { defaultTokenizer } from './tokenizer.ts';
+import { isCompensating } from './grammar-2d.ts';
 import type { Token } from './types.ts';
 
 export interface Question {
@@ -43,6 +44,14 @@ const OPENERS: ReadonlyArray<string[]> = [
   ['what', 'was', 'the'],
   ['what', 'will', 'the'],
   ['what', 'would', 'the'],
+  // "...and what is *its* direction of travel?" — the second clause of a
+  // two-part question switches to a pronoun, and without these the app answers
+  // only the first half and calls the rest narration.
+  ['what', 'is', 'its'],
+  ['what', 'was', 'its'],
+  ['what', 'is', 'her'],
+  ['what', 'is', 'his'],
+  ['what', 'is', 'their'],
   ['at', 'what'],
   ['with', 'what'],
   ['find', 'the'],
@@ -84,6 +93,47 @@ const RELATIVE_DIRECT: ReadonlyArray<readonly [string[], VariableKey]> = [
   [['how', 'far'], 'd'],
   [['where'], 'xm'],
 ];
+
+/**
+ * Planar nouns, with the one genuinely ambiguous case handled.
+ *
+ * "At what angle" asks two different questions in the two river archetypes: in
+ * a drift crossing it wants the heading the body *ends up* travelling, `θ_R`;
+ * in a compensation crossing it wants the heading the body must *aim*, `θ₁`.
+ * The words are identical, so the archetype has to decide, using the same
+ * narrow cues the grammar uses to pick the frame. Answering the other one would
+ * be a correct number to a question nobody asked.
+ */
+function planarNouns(compensating: boolean): ReadonlyArray<readonly [string, VariableKey]> {
+  const angle: VariableKey = compensating ? 'th1' : 'thr';
+  return [
+    ['velocity', 'vr'],
+    ['speed', 'vr'],
+    ['direction', angle],
+    ['angle', angle],
+    ['heading', angle],
+    ['bearing', angle],
+    ['time', 't'],
+    ['width', 'sy'],
+    ['drift', 'sx'],
+    ['distance', 'sx'],
+  ];
+}
+
+function planarDirect(
+  compensating: boolean,
+): ReadonlyArray<readonly [string[], VariableKey]> {
+  const angle: VariableKey = compensating ? 'th1' : 'thr';
+  return [
+    [['how', 'fast'], 'vr'],
+    [['how', 'long'], 't'],
+    [['how', 'wide'], 'sy'],
+    [['how', 'far', 'downstream'], 'sx'],
+    [['how', 'far'], 'sx'],
+    [['at', 'what', 'angle'], angle],
+    [['in', 'what', 'direction'], angle],
+  ];
+}
 
 /** Nouns naming a quantity, and the variable each maps to. */
 const NOUNS: ReadonlyArray<readonly [string, VariableKey]> = [
@@ -130,10 +180,12 @@ export function detectQuestion(
   text: string,
   domain: DomainId = 'kinematics-1d',
 ): Question | null {
-  const relative = domain === 'relative-velocity';
-  const direct = relative ? RELATIVE_DIRECT : DIRECT;
-  const nouns = relative ? RELATIVE_NOUNS : NOUNS;
   const tokens = defaultTokenizer.tokenize(text);
+  const planar = domain === 'relative-velocity-2d';
+  const relative = domain === 'relative-velocity';
+  const compensating = planar && isCompensating(tokens);
+  const direct = planar ? planarDirect(compensating) : relative ? RELATIVE_DIRECT : DIRECT;
+  const nouns = planar ? planarNouns(compensating) : relative ? RELATIVE_NOUNS : NOUNS;
   let found: Question | null = null;
 
   for (let i = 0; i < tokens.length; i++) {

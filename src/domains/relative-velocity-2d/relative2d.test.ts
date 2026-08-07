@@ -73,13 +73,39 @@ describe('2-D relative velocity', () => {
   });
 
   /**
-   * A magnitude plus one component leaves two possible headings, and nothing
-   * here can choose. Declining beats picking a quadrant at random.
+   * A magnitude plus one component gives two headings, and the orientation rule
+   * — +y is the way body 1 travels — is what picks between them.
+   *
+   * This test used to assert the opposite: the domain declined rather than
+   * choose. That was honest but left the compensation archetype ("at what angle
+   * must she head to land directly opposite?") permanently unsolvable, since it
+   * is exactly this step. Changed deliberately, and the assumption is now stated
+   * at the top of the domain rather than hidden in a root order.
    */
-  it('declines a direction that a single component cannot fix', () => {
+  it('uses the orientation rule to pick between the two headings', () => {
     const result = run({ v1: mps(5), v1x: mps(3) });
-    expect(result.knowns['th1']).toBeUndefined();
+    expect(result.knowns['v1y']?.value).toBeCloseTo(4, 9);
+    expect(inDeg(result.knowns['th1']!)).toBeCloseTo(53.13, 2);
+  });
+
+  /** Upstream heading: x negative, but the across-component still positive. */
+  it('recovers an upstream heading from speed and drift-cancelling component', () => {
+    const result = run({ v1: mps(1.2), v1x: mps(-0.5) });
+    expect(result.knowns['v1y']?.value).toBeCloseTo(1.0909, 4);
+    expect(inDeg(result.knowns['th1']!)).toBeCloseTo(114.62, 2);
+  });
+
+  /** No triangle: the component cannot be longer than the magnitude. */
+  it('declines a component that exceeds the magnitude', () => {
+    const result = run({ v1: mps(3), v1x: mps(5) });
     expect(result.knowns['v1y']).toBeUndefined();
+    expect(result.knowns['th1']).toBeUndefined();
+  });
+
+  /** The rule prunes; it does not forbid. A determined negative still stands. */
+  it('keeps a negative across-component that another equation determines', () => {
+    const result = run({ vry: mps(0), v2y: mps(5), v2x: mps(0), vrx: mps(0) });
+    expect(result.knowns['v1y']?.value).toBeCloseTo(-5, 9);
   });
 
   it('leaves everything unsolved when nothing is known', () => {

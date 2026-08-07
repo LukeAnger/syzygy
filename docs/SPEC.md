@@ -638,10 +638,38 @@ Enabled by the layered design; **not** built in v1.
   anticlockwise from +x and nothing assumes "from north" or "off straight
   across", since those are per-problem conventions.
 
-  No prose parser yet: 2-D problems state directions in words ("straight
-  across", "downstream", "into the wind") that no rule can turn into an angle.
-  Manual entry solves them; Storymode reports it read nothing rather than
-  guessing.
+  Detection needs a crossing cue, a moving-medium cue and a stated speed — the
+  same "two independent bars" shape as the 1-D relative test, for the same
+  reason: "ignore wind resistance" is stock free-fall prose and "walks across
+  the room" is stock anything. It is checked *before* the 1-D test, because a
+  river problem usually says "relative to the shore" too and would otherwise be
+  read as motion along a line.
+
+  The prose rules choose the axes — +x downstream, +y across — and that choice
+  is a reading, not a fact, so it is stated wherever it shows. Two zeros come
+  from it rather than from the text, and each carries the phrase that licensed
+  it so a student can disagree with the specific words.
+
+  The grammar turns on one distinction that no amount of care with numbers would
+  survive getting wrong. A swimmer who **aims across and drifts** has no
+  downstream speed of her own (`v₁ₓ = 0`); a swimmer who **aims upstream to land
+  directly opposite** has no downstream drift in the result (`v_Rx = 0`). The
+  two are written in nearly the same words, and reading either as the other
+  yields a plausible fully-worked wrong answer. So the compensation cues name an
+  intent to counteract and nothing vaguer — "at what angle" is excluded, because
+  it asks the drift question just as often.
+
+  The compensation case forced one modelling concession. Recovering a heading
+  from a magnitude and one component is `y = ±√(|v|² − x²)`, and the pack
+  originally declined it rather than pick a quadrant. That was honest but left
+  the entire archetype unsolvable, since it *is* the step. So the pack now
+  offers both roots and states an orientation — +y is the way the first body
+  travels — as a `physical` constraint, which prunes rather than forbids: a
+  negative `v₁ᵧ` that some other equation determines still stands, because the
+  solver keeps raw roots when a constraint leaves none.
+
+  Still unread: angles given as input, compass directions, and wind problems
+  that are not crossings.
 - ⬜ Ingest endpoint + batch rule-suggestion pipeline (out of static-app scope).
 - 🟢 **Multi-phase motion.** *"Drops off a roof at 150 m onto another roof 30 m
   high, then rolls off and falls to the ground — how fast is it going when it

@@ -176,15 +176,72 @@ Y" appears in most problems of this kind, and it should outrank word order.
 
 | Problem | Needs |
 |---|---|
-| Duck crossing a flowing river | 2-D vector addition; answer is 2.5 m/s at ~53° downstream |
 | "Why take off into the wind?" | conceptual — no quantities at all |
-| Newspaper delivery angle | 2-D, solving for an angle |
-| Hockey puck aiming angle | 2-D, solving for an angle |
 | Scotch yoke sliding velocity | rotational kinematics, ω and linkage geometry |
 
-Four of the five want the same thing: **velocities as 2-D vectors**, with
-addition and an angle as an answer. That is a domain, not a rule — the math
-core already carries dimensions but every quantity is a scalar.
+The four 2-D problems that used to sit in this table are now in scope — see
+below.
+
+---
+
+## 2-D relative velocity
+
+Detected from a **crossing** cue plus a **moving medium** cue plus at least one
+stated speed. All three are required: "ignore wind resistance" and "walks
+across the room" each trip one bar on their own, and neither is planar.
+
+The parser chooses the axes, and the choice is part of the reading:
+
+- **+x is downstream** — the way the current or wind pushes
+- **+y is across** — the way the body is trying to go
+
+### RV2D1. Drift crossing
+
+```text
+A duck swims at a constant speed from one side of a river to the other side in a time of 4 seconds. The river is 6 meters wide and it is flowing at a speed of 2 m/s. What is the velocity of the duck and what is its direction of travel, with respect to ground?
+```
+
+Expected: `s_y` 6 m, `t` 4 s, `v_2x` 2 m/s, and two inferred zeros — `v_1x` 0
+(aimed straight across) and `v_2y` 0 (the current runs along the bank, not
+across it). The across-speed is **not stated anywhere**: 1.5 m/s has to come out
+of 6 m ÷ 4 s, which is why the domain needed displacement and time at all.
+
+Answer: **2.5 m/s at 36.87°** from downstream — 53.13° off straight across.
+
+### RV2D2. Compensation crossing
+
+```text
+A swimmer who can swim at 1.2 m/s must head upstream to land directly opposite across a river 30 m wide flowing at 0.5 m/s. At what angle must she head?
+```
+
+Expected: `v_1` 1.2 m/s as a **magnitude only** — her heading is the unknown, so
+filing it as `v_1y` would assert the answer — plus `v_Rx` 0, because landing
+directly opposite means nothing carried her downstream.
+
+Answer: **114.62°**, which is 24.62° upstream of straight across. The crossing
+takes 27.5 s.
+
+### The pair is the test
+
+Run these two together every time. They are written in nearly the same words
+and need opposite models: the drifting swimmer has no downstream speed *of her
+own*, the compensating one has no downstream drift *in the result*. Read either
+as the other and the app returns a plausible, fully worked, wrong answer — the
+failure this codebase cares most about.
+
+The cues that separate them are deliberately narrow: they name aiming upstream
+or landing directly opposite, and nothing vaguer. **"At what angle" is not one
+of them**, because it asks the drift question exactly as often as the other one.
+
+### Still out of scope in 2-D
+
+- Angles given as **input** ("heading 30° north of east"). These problems ask
+  for headings far more than they state them, and teaching the unit table the
+  word "degrees" would hand every other detector a dimensionless number to trip
+  over for almost no gain.
+- Compass directions, and "north of east" phrasing generally.
+- Wind problems that are not crossings — a plane with a quartering tailwind is
+  the same math, but no cue here recognises it.
 
 ---
 
