@@ -17,7 +17,8 @@ export function VariableForm({ result }: VariableFormProps) {
   const unitSystem = useKinematicsStore((s) => s.unitSystem);
   const setInput = useKinematicsStore((s) => s.setInput);
   const setUnitSystem = useKinematicsStore((s) => s.setUnitSystem);
-  const variables = variablesFor(useKinematicsStore((s) => s.domain));
+  const domain = useKinematicsStore((s) => s.domain);
+  const variables = variablesFor(domain);
   const loadFreeFall = useKinematicsStore((s) => s.loadFreeFall);
   const reset = useKinematicsStore((s) => s.reset);
 
@@ -66,9 +67,12 @@ export function VariableForm({ result }: VariableFormProps) {
       })}
 
       <div className={styles.controls}>
-        <button type="button" className={styles.btn} onClick={loadFreeFall}>
-          Free fall
-        </button>
+        {/* A gravity preset only means something where `a` exists. */}
+        {domain === 'kinematics-1d' && (
+          <button type="button" className={styles.btn} onClick={loadFreeFall}>
+            Free fall
+          </button>
+        )}
         <button type="button" className={styles.btn} onClick={reset}>
           Reset
         </button>

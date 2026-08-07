@@ -63,7 +63,7 @@ interface SlotSpec {
   requireExplicitUnit?: boolean;
 }
 
-function phraseAt(tokens: Token[], at: number, words: string[]): boolean {
+export function phraseAt(tokens: Token[], at: number, words: string[]): boolean {
   for (let j = 0; j < words.length; j++) {
     const token = tokens[at + j];
     if (!token || token.kind !== 'word' || token.text !== words[j]) return false;
@@ -150,7 +150,7 @@ function applySign(value: number, sign: Sign): number {
   return sign === 'negative' ? -Math.abs(value) : Math.abs(value);
 }
 
-function numberRule(
+export function numberRule(
   id: string,
   description: string,
   phrases: string[][],
@@ -224,7 +224,7 @@ function numberRule(
 /** Words that mean what follows is where the object *ends up*, not where it began. */
 const LANDING_CUES = ['onto', 'lands', 'settles', 'stops', 'perched', 'resting'];
 
-function postfixNumberRule(
+export function postfixNumberRule(
   id: string,
   description: string,
   suffixes: string[][],

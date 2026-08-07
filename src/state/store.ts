@@ -254,10 +254,12 @@ function quantityToInput(
 export function assignmentsToInputs(
   assignments: Assignment[],
   system: UnitSystem,
+  domain: DomainId = 'kinematics-1d',
 ): Partial<Inputs> {
+  const accepted = new Set<string>(inputKeys(domain));
   const inputs: Partial<Inputs> = {};
   for (const assignment of assignments) {
-    if ((INPUT_KEYS as string[]).includes(assignment.variable)) {
+    if (accepted.has(assignment.variable)) {
       const key = assignment.variable as InputKey;
       inputs[key] = quantityToInput(key, assignment.quantity, system);
     }
@@ -372,9 +374,17 @@ const FREE_FALL: Record<UnitSystem, string> = {
 };
 
 /** Build the input/given/story state patch from a parse result. */
-function statePatch(system: UnitSystem, text: string, result: ParseResult) {
-  const parsed = assignmentsToInputs(result.assignments, system);
-  const segmentation = segmentPhases(text);
+function statePatch(
+  system: UnitSystem,
+  text: string,
+  result: ParseResult,
+  domain: DomainId,
+) {
+  const parsed = assignmentsToInputs(result.assignments, system, domain);
+  // Phases and the ground-landing default describe one falling object; neither
+  // means anything for two bodies on a line.
+  const kinematic = domain === 'kinematics-1d';
+  const segmentation = kinematic ? segmentPhases(text) : null;
   // "Falls to the ground": start position given but no final one ⇒ x₂ = 0.
   //
   // Only when no duration is known. A stated time means the story defines its
@@ -384,6 +394,7 @@ function statePatch(system: UnitSystem, text: string, result: ParseResult) {
   // the shaft floor produced a spurious Δx and a confident wrong answer, where
   // leaving it blank correctly reports "not enough information".
   if (
+    kinematic &&
     parsed.x1 !== undefined &&
     parsed.x2 === undefined &&
     parsed.t === undefined
@@ -410,20 +421,23 @@ function statePatch(system: UnitSystem, text: string, result: ParseResult) {
     asked: result.target as VariableKey | undefined,
     // Read from the story, not chosen. Naming the classification is itself
     // instructive; assuming it silently is what a picker would do.
-    domain: detectDomain(text),
+    domain,
     domainAmbiguous: isAmbiguousDomain(text),
     // Undefined for the overwhelming majority of stories, which are one
     // segment; the app then solves exactly as it always has.
     phases: phaseState,
     // Staged prose we could not turn into a chain. The single-segment path
     // will still answer it, so the UI has to say the answer may be partial.
-    unsegmentedStages: describesStages(text) && !segmentation,
+    unsegmentedStages: kinematic && describesStages(text) && !segmentation,
     // Acceleration resets to free fall for this story's system unless the story
     // states one. It used to carry over from whatever was in the form, which
     // let one story's gravity leak into the next: solving an imperial problem
     // left a = −32.17 ft/s² behind, and the next metric story inherited it as
     // −9.805416 m/s² — close enough to −9.81 to pass a glance, and wrong.
-    inputs: { ...DEFAULT_INPUTS, a: FREE_FALL[system], ...parsed },
+    // Only kinematics has an acceleration to default; other packs start blank.
+    inputs: (kinematic
+      ? { ...DEFAULT_INPUTS, a: FREE_FALL[system], ...parsed }
+      : { ...blankInputs(domain), ...parsed }) as Inputs,
   };
 }
 
@@ -591,12 +605,15 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
 
   loadStory: (text) => {
     const state = get();
-    const result = parse(text);
+    // Detected before parsing, because the domain decides which rule set reads
+    // the story — two-body prose needs its own grammar entirely.
+    const domain = detectDomain(text);
+    const result = parse(text, domain);
     // A story written in feet is an imperial problem: solve *and* display it
     // that way, rather than silently converting the answer to metres.
     const system = detectSystem(text) ?? state.unitSystem;
     set({
-      ...statePatch(system, text, result),
+      ...statePatch(system, text, result, domain),
       unitSystem: system,
       diagnostics: diagnose('rule', result, result),
     });
@@ -613,11 +630,12 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
           if (smart) {
             // The grammar is the floor, not the alternative — smart parse only
             // fills what it left empty.
-            const rule = parse(text);
+            const domain = detectDomain(text);
+            const rule = parse(text, domain);
             const result = mergeParses(rule, smart);
             const system = detectSystem(text) ?? state.unitSystem;
             set({
-              ...statePatch(system, text, result),
+              ...statePatch(system, text, result, domain),
               unitSystem: system,
               diagnostics: diagnose('smart', rule, result),
             });

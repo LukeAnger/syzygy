@@ -74,7 +74,7 @@ describe('parse', () => {
       { kind: 'word', text: 'dropped', index: 0 },
     ];
     const stub: Tokenizer = { tokenize: () => fixed };
-    const result = parse('anything at all', stub);
+    const result = parse('anything at all', 'kinematics-1d', stub);
     expect(value(result, 'v0')).toBe(0);
   });
 });

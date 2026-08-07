@@ -45,7 +45,6 @@ export function Storymode() {
   const submitStory = useKinematicsStore((s) => s.submitStory);
   const tutorEnabled = useKinematicsStore((s) => s.tutorEnabled);
   const domain = useKinematicsStore((s) => s.domain);
-  const story = useKinematicsStore((s) => s.story);
   // Phases and staged motion are a 1-D kinematics idea; there is no meaning to
   // "the second stage of the fall" when the problem is two bodies on a line.
   const kinematic = domain === 'kinematics-1d';
@@ -123,21 +122,11 @@ export function Storymode() {
 
       <SmartParseControl />
 
-      {/* Two-body prose has no grammar rules yet, so "try rephrasing" would
-          blame wording that is perfectly clear. Say what is actually missing. */}
-      {!kinematic && story !== '' ? (
+      {unusedNumbers.length > 0 && (
         <p className={styles.warn}>
-          Storymode can&apos;t read two-body problems yet — no wording will
-          work. The equations are ready, so enter the values in Manual and it
-          will solve.
+          Couldn&apos;t place: {unusedNumbers.join(', ')} — try rephrasing, or
+          adjust manually below.
         </p>
-      ) : (
-        unusedNumbers.length > 0 && (
-          <p className={styles.warn}>
-            Couldn&apos;t place: {unusedNumbers.join(', ')} — try rephrasing, or
-            adjust manually below.
-          </p>
-        )
       )}
 
       <p className={styles.examples}>

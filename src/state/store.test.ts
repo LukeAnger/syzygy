@@ -554,3 +554,70 @@ describe('store: domain detection', () => {
     expect(solved.knowns['t']?.value).toBeCloseTo(12, 9);
   });
 });
+
+describe('store: reading a two-body story', () => {
+  beforeEach(() => useKinematicsStore.getState().reset());
+
+  /** The problem that motivated the whole domain. */
+  it('reads the motorcycle problem end to end', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory(
+        'A motorcycle traveling on the highway at a speed of 120 km/h passes a ' +
+          'car traveling at a speed of 90 km/h. From the point of view of a ' +
+          'passenger on the car, what is the velocity of the motorcycle?',
+      );
+    const state = useKinematicsStore.getState();
+
+    expect(state.domain).toBe('relative-velocity');
+    // Stored in SI: 120 km/h is 33.33 m/s, 90 is 25.
+    expect(Number(state.inputs['va'])).toBeCloseTo(33.333, 2);
+    expect(Number(state.inputs['vb'])).toBeCloseTo(25, 2);
+    expect(state.asked).toBe('vrel');
+
+    const solved = solveInputs(state.inputs, state.unitSystem, state.domain);
+    // 120 − 90 = 30 km/h = 8.33 m/s.
+    expect(solved.knowns['vrel']?.value).toBeCloseTo(8.333, 2);
+  });
+
+  it('negates the second body when they close head-on', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory(
+        'Two trains 600 m apart travel towards each other at 30 m/s and 20 m/s. ' +
+          'How long before they meet?',
+      );
+    const state = useKinematicsStore.getState();
+
+    expect(Number(state.inputs['va'])).toBeCloseTo(30, 6);
+    expect(Number(state.inputs['vb'])).toBeCloseTo(-20, 6);
+    expect(Number(state.inputs['d'])).toBeCloseTo(600, 6);
+    expect(state.asked).toBe('t');
+
+    const solved = solveInputs(state.inputs, state.unitSystem, state.domain);
+    expect(solved.knowns['t']?.value).toBeCloseTo(12, 6);
+  });
+
+  it('keeps both positive for a pursuit', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory('A car at 30 m/s overtakes a truck moving at 20 m/s, 100 m ahead');
+    const state = useKinematicsStore.getState();
+
+    expect(Number(state.inputs['vb'])).toBeCloseTo(20, 6);
+    const solved = solveInputs(state.inputs, state.unitSystem, state.domain);
+    expect(solved.knowns['vrel']?.value).toBeCloseTo(10, 6);
+    expect(solved.knowns['t']?.value).toBeCloseTo(10, 6);
+  });
+
+  /** Kinematics-only machinery must not fire here. */
+  it('applies no ground-landing default and no phases', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory('Two trains 600 m apart travel towards each other at 30 m/s and 20 m/s');
+    const state = useKinematicsStore.getState();
+    expect(state.inputs['x2']).toBeUndefined();
+    expect(state.phases).toBeUndefined();
+    expect(state.unsegmentedStages).toBe(false);
+  });
+});

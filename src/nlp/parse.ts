@@ -11,14 +11,23 @@ import type { Knowns, VariableKey } from '../engine/index.ts';
 import type { Assignment, ParseResult, SlotMatch, Tokenizer } from './types.ts';
 import { defaultTokenizer } from './tokenizer.ts';
 import { RULES } from './grammar.ts';
+import { RELATIVE_RULES } from './grammar-relative.ts';
+import type { DomainId } from '../domains/index.ts';
+
+/** Which rule set reads a story, by domain. */
+const RULES_FOR: Record<DomainId, typeof RULES> = {
+  'kinematics-1d': RULES,
+  'relative-velocity': RELATIVE_RULES,
+};
 import { detectQuestion } from './question.ts';
 
 export function parse(
   input: string,
+  domain: DomainId = 'kinematics-1d',
   tokenizer: Tokenizer = defaultTokenizer,
 ): ParseResult {
   const tokens = tokenizer.tokenize(input);
-  const allMatches = RULES.flatMap((rule) => rule.match(tokens));
+  const allMatches = RULES_FOR[domain].flatMap((rule) => rule.match(tokens));
 
   const chosen = new Map<VariableKey, SlotMatch>();
   for (const match of allMatches) {
@@ -45,7 +54,7 @@ export function parse(
     text: tokens.map((t) => t.text).join(' '),
     assignments,
     unusedNumbers,
-    target: detectQuestion(input)?.target,
+    target: detectQuestion(input, domain)?.target,
   };
 }
 

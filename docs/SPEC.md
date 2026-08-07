@@ -605,9 +605,19 @@ Enabled by the layered design; **not** built in v1.
   *and* two stated speeds, since "passes a marker" plus one speed is still free
   fall), names its verdict on screen so the classification is visible, and is
   overridable because being stuck with the wrong equations is worse than being
-  asked. Still to come: two-body parsing, so a story like "a motorcycle at
-  120 km/h passes a car at 90 km/h" fills the fields on its own. Phases,
-  segmentation and the tutor remain kinematics-only.
+  asked.
+
+  Each domain brings its own rule set. Kinematics works because a phrase names
+  a slot — "from a height of" can only be x₁ — but both speeds in a two-body
+  problem are introduced identically, and only *order* separates them. So
+  `grammar-relative.ts` reads the velocities positionally, first body then
+  second, and decides the sign from wording: "towards each other" makes the
+  second negative. Question words are domain-specific too — "what is the
+  velocity of the motorcycle?" asks for `v` in free fall and `v_rel` when the
+  frame is another moving body.
+
+  Phases, segmentation, the ground-landing default, the motion chart and the
+  free-fall preset are all one-object ideas and stay switched off elsewhere.
 - ⬜ Ingest endpoint + batch rule-suggestion pipeline (out of static-app scope).
 - 🟢 **Multi-phase motion.** *"Drops off a roof at 150 m onto another roof 30 m
   high, then rolls off and falls to the ground — how fast is it going when it

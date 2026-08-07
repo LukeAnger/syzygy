@@ -15,6 +15,7 @@
  * wrong is easier to debug than getting it stochastically wrong.
  */
 import type { VariableKey } from '../engine/index.ts';
+import type { DomainId } from '../domains/index.ts';
 import { defaultTokenizer } from './tokenizer.ts';
 import type { Token } from './types.ts';
 
@@ -52,6 +53,36 @@ const OPENERS: ReadonlyArray<string[]> = [
   ['determine'],
   ['compute', 'the'],
   ['solve', 'for'],
+];
+
+/**
+ * The same words mean different variables in different domains.
+ *
+ * "What is the velocity of the motorcycle?" asks for `v` in a free-fall problem
+ * and for `v_rel` in a two-body one — the question is about the motorcycle *as
+ * seen from the car*, which is the relative velocity by definition. Mapping
+ * nouns without knowing the domain would answer a different question.
+ */
+const RELATIVE_NOUNS: ReadonlyArray<readonly [string, VariableKey]> = [
+  ['velocity', 'vrel'],
+  ['speed', 'vrel'],
+  ['time', 't'],
+  ['distance', 'd'],
+  ['separation', 'd'],
+  ['gap', 'd'],
+  ['apart', 'd'],
+  ['position', 'xm'],
+  ['point', 'xm'],
+  ['place', 'xm'],
+];
+
+const RELATIVE_DIRECT: ReadonlyArray<readonly [string[], VariableKey]> = [
+  [['how', 'fast'], 'vrel'],
+  [['how', 'long'], 't'],
+  [['how', 'much', 'time'], 't'],
+  [['how', 'far', 'apart'], 'd'],
+  [['how', 'far'], 'd'],
+  [['where'], 'xm'],
 ];
 
 /** Nouns naming a quantity, and the variable each maps to. */
@@ -95,12 +126,18 @@ function textOf(tokens: Token[], from: number, to: number): string {
  * speed on impact?") are conventionally answered in order, and the last clause
  * is the one a student is working on.
  */
-export function detectQuestion(text: string): Question | null {
+export function detectQuestion(
+  text: string,
+  domain: DomainId = 'kinematics-1d',
+): Question | null {
+  const relative = domain === 'relative-velocity';
+  const direct = relative ? RELATIVE_DIRECT : DIRECT;
+  const nouns = relative ? RELATIVE_NOUNS : NOUNS;
   const tokens = defaultTokenizer.tokenize(text);
   let found: Question | null = null;
 
   for (let i = 0; i < tokens.length; i++) {
-    for (const [phrase, target] of DIRECT) {
+    for (const [phrase, target] of direct) {
       if (phraseAt(tokens, i, phrase)) {
         found = { target, source: textOf(tokens, i, i + phrase.length - 1) };
       }
@@ -110,7 +147,7 @@ export function detectQuestion(text: string): Question | null {
       if (!phraseAt(tokens, i, opener)) continue;
       const from = i + opener.length;
       for (let j = from; j < Math.min(from + WINDOW, tokens.length); j++) {
-        const noun = NOUNS.find(([word]) => tokens[j]?.text === word);
+        const noun = nouns.find(([word]) => tokens[j]?.text === word);
         if (!noun) continue;
         // "initial speed" asks for v₀; a bare "speed" asks for the final one.
         const qualified =
