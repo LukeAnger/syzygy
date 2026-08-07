@@ -2,13 +2,25 @@ import { useState } from 'react';
 import { useKinematicsStore } from '../../state/index.ts';
 import { Understood } from './Understood.tsx';
 import { PhaseEditor } from './PhaseEditor.tsx';
+import type { DomainId } from '../../domains/index.ts';
 import styles from './Storymode.module.css';
 
-const EXAMPLES = [
-  'A ball is dropped from a height of 45 m',
-  'A stone is thrown upward at 20 m/s and hits the ground at 30 m/s',
-  'An object dropped from 100 m falls for 4.5 s',
-];
+/**
+ * Worked examples per domain. Offering free-fall prompts while the app is set
+ * to relative velocity invites a problem it cannot read, then blames the
+ * wording.
+ */
+const EXAMPLES: Record<DomainId, string[]> = {
+  'kinematics-1d': [
+    'A ball is dropped from a height of 45 m',
+    'A stone is thrown upward at 20 m/s and hits the ground at 30 m/s',
+    'An object dropped from 100 m falls for 4.5 s',
+  ],
+  'relative-velocity': [
+    'Two trains 600 m apart travel towards each other at 30 m/s and 20 m/s',
+    'A car at 30 m/s overtakes a truck moving at 20 m/s, 100 m ahead',
+  ],
+};
 
 /** Minimal typing for the vendor-prefixed Web Speech API. */
 interface SpeechWindow {
@@ -32,6 +44,12 @@ export function Storymode() {
   const solving = useKinematicsStore((s) => s.solving);
   const submitStory = useKinematicsStore((s) => s.submitStory);
   const tutorEnabled = useKinematicsStore((s) => s.tutorEnabled);
+  const domain = useKinematicsStore((s) => s.domain);
+  const story = useKinematicsStore((s) => s.story);
+  // Phases and staged motion are a 1-D kinematics idea; there is no meaning to
+  // "the second stage of the fall" when the problem is two bodies on a line.
+  const kinematic = domain === 'kinematics-1d';
+  const examples = EXAMPLES[domain];
   const setTutorEnabled = useKinematicsStore((s) => s.setTutorEnabled);
   const unusedNumbers = useKinematicsStore((s) => s.unusedNumbers);
 
@@ -105,16 +123,26 @@ export function Storymode() {
 
       <SmartParseControl />
 
-      {unusedNumbers.length > 0 && (
+      {/* Two-body prose has no grammar rules yet, so "try rephrasing" would
+          blame wording that is perfectly clear. Say what is actually missing. */}
+      {!kinematic && story !== '' ? (
         <p className={styles.warn}>
-          Couldn&apos;t place: {unusedNumbers.join(', ')} — try rephrasing, or
-          adjust manually below.
+          Storymode can&apos;t read two-body problems yet — no wording will
+          work. The equations are ready, so enter the values in Manual and it
+          will solve.
         </p>
+      ) : (
+        unusedNumbers.length > 0 && (
+          <p className={styles.warn}>
+            Couldn&apos;t place: {unusedNumbers.join(', ')} — try rephrasing, or
+            adjust manually below.
+          </p>
+        )
       )}
 
       <p className={styles.examples}>
         Try:{' '}
-        {EXAMPLES.map((example, i) => (
+        {examples.map((example, i) => (
           <span key={example}>
             <span
               className={styles.example}
@@ -125,13 +153,13 @@ export function Storymode() {
             >
               “{example}”
             </span>
-            {i < EXAMPLES.length - 1 ? ' · ' : ''}
+            {i < examples.length - 1 ? ' · ' : ''}
           </span>
         ))}
       </p>
 
       <Understood />
-      <PhaseEditor />
+      {kinematic && <PhaseEditor />}
       <ShareConsent />
     </section>
   );

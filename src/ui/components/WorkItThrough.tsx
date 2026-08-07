@@ -21,7 +21,8 @@ import { type Relevance, relevanceFor } from '../../engine/index.ts';
 import type { SolveResult } from '../../engine/index.ts';
 import type { VariableKey } from '../../state/index.ts';
 import { gradeGivens, gradeTarget, isWorkable } from '../../tutor/grade.ts';
-import { formatVar, symbolLatex } from '../units.ts';
+import { formatVar, summaryFor, symbolLatex } from '../units.ts';
+import type { DomainId } from '../../domains/index.ts';
 import { Katex } from './Katex.tsx';
 import styles from './WorkItThrough.module.css';
 
@@ -30,15 +31,23 @@ interface Props {
   given: VariableKey[];
   result: SolveResult;
   unitSystem: 'metric' | 'imperial';
+  domain: DomainId;
   children: ReactNode;
 }
 
-/** What a problem can ask for. `dx` is included — "how far" is a real question. */
-const TARGETS: VariableKey[] = ['v', 't', 'dx', 'x1', 'x2', 'v0', 'a'];
+/**
+ * What a problem can ask for — every variable the active domain declares,
+ * results included, since "how far" and "where do they meet" are real
+ * questions. A fixed list would offer free-fall symbols for a two-body problem.
+ */
+function targetsFor(domain: DomainId): VariableKey[] {
+  return summaryFor(domain);
+}
 
 type Stage = 'target' | 'givens' | 'revealed';
 
-export function WorkItThrough({ asked, given, result, unitSystem, children }: Props) {
+export function WorkItThrough({ asked, given, result, unitSystem, domain, children }: Props) {
+  const targets = targetsFor(domain);
   const [stage, setStage] = useState<Stage>('target');
   const [pickedTarget, setPickedTarget] = useState<VariableKey | null>(null);
   const [picks, setPicks] = useState<VariableKey[]>([]);
@@ -64,7 +73,7 @@ export function WorkItThrough({ asked, given, result, unitSystem, children }: Pr
         <h2 className={styles.title}>Work it through</h2>
         <p className={styles.question}>What is this problem asking you to find?</p>
         <div className={styles.choices}>
-          {TARGETS.map((key) => (
+          {targets.map((key) => (
             <button
               key={key}
               type="button"

@@ -167,7 +167,7 @@ export function Solution({
         <h2 className={styles.title}>Solution</h2>
         {supplied.length === 0 ? (
           <p className={styles.empty}>
-            Enter three known variables (or describe a problem in Storymode) and
+            Enter what the problem gives you (or describe it in Storymode) and
             the worked solution appears here.
           </p>
         ) : (
@@ -176,8 +176,8 @@ export function Solution({
           // hint that the parser got halfway.
           <div className={styles.stalled}>
             <p className={styles.stalledLead}>
-              Not enough to solve yet — kinematics needs three known values and
-              this has {supplied.length === 1 ? 'only one' : `only ${supplied.length}`}.
+              Not enough to solve yet — this has{' '}
+              {supplied.length === 1 ? 'only one value' : `only ${supplied.length} values`}.
             </p>
             <p className={styles.stalledDetail}>
               Understood so far:{' '}

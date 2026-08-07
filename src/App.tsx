@@ -100,6 +100,7 @@ export default function App() {
             given={given}
             result={result}
             unitSystem={unitSystem}
+            domain={domain}
           >
           <Solution
             result={result}
@@ -112,10 +113,10 @@ export default function App() {
             domain={domain}
           />
           </WorkItThrough>
-          <MotionChart
-            results={charted}
-            unitSystem={unitSystem}
-          />
+          {/* Position/velocity curves assume one accelerating object. */}
+          {domain === 'kinematics-1d' && (
+            <MotionChart results={charted} unitSystem={unitSystem} />
+          )}
         </div>
       </div>
 
