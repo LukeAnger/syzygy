@@ -1,4 +1,4 @@
-import type { Quantity, UnitSystem } from '../../math/index.ts';
+import type { Quantity } from '../../math/index.ts';
 import {
   type PhaseLink,
   type PhaseSolveResult,
@@ -7,14 +7,14 @@ import {
   relevanceFor,
 } from '../../engine/index.ts';
 import type { VariableKey } from '../../state/index.ts';
-import { formatVar, summaryFor, symbolLatex } from '../units.ts';
+import { type Units, formatVar, summaryFor, symbolLatex } from '../units.ts';
 import type { DomainId } from '../../domains/index.ts';
 import { Katex } from './Katex.tsx';
 import styles from './Solution.module.css';
 
 interface SolutionProps {
   result: SolveResult;
-  unitSystem: UnitSystem;
+  unitSystem: Units;
   /** The variable the problem asked for, when it asked for one. */
   asked?: VariableKey;
   /** Variables the story supplied, for sorting used from unnecessary. */
@@ -38,7 +38,7 @@ function Steps({
   unitSystem,
 }: {
   result: SolveResult;
-  unitSystem: UnitSystem;
+  unitSystem: Units;
 }) {
   return (
     <>
@@ -81,7 +81,7 @@ function Steps({
 }
 
 /** "150 m → 30 m", for a phase heading. */
-function span(x1: Quantity | undefined, x2: Quantity | undefined, system: UnitSystem) {
+function span(x1: Quantity | undefined, x2: Quantity | undefined, system: Units) {
   if (!x1 || !x2) return null;
   return `${formatVar('x1', x1, system)} → ${formatVar('x2', x2, system)}`;
 }

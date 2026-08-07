@@ -10,7 +10,7 @@ import {
   solvePhaseSequence,
   useKinematicsStore,
 } from './store.ts';
-import { LENGTH, TIME, VELOCITY, quantity } from '../math/index.ts';
+import { LENGTH, TIME, VELOCITY, quantity, toUnit } from '../math/index.ts';
 import { relevanceFor } from '../engine/index.ts';
 import { smartParse } from '../nlp/smart/index.ts';
 
@@ -570,14 +570,25 @@ describe('store: reading a two-body story', () => {
     const state = useKinematicsStore.getState();
 
     expect(state.domain).toBe('relative-velocity');
-    // Stored in SI: 120 km/h is 33.33 m/s, 90 is 25.
-    expect(Number(state.inputs['va'])).toBeCloseTo(33.333, 2);
-    expect(Number(state.inputs['vb'])).toBeCloseTo(25, 2);
+    // Held in the units the problem used, not converted to SI behind the
+    // student's back — the field reads back what they wrote.
+    expect(Number(state.inputs['va'])).toBeCloseTo(120, 6);
+    expect(Number(state.inputs['vb'])).toBeCloseTo(90, 6);
+    expect(state.displayUnits.velocity?.symbol).toBe('km/h');
     expect(state.asked).toBe('vrel');
 
-    const solved = solveInputs(state.inputs, state.unitSystem, state.domain);
-    // 120 − 90 = 30 km/h = 8.33 m/s.
+    const solved = solveInputs(
+      state.inputs,
+      state.unitSystem,
+      state.domain,
+      state.displayUnits,
+    );
+    // SI internally: 30 km/h is 8.33 m/s.
     expect(solved.knowns['vrel']?.value).toBeCloseTo(8.333, 2);
+    // And 30 km/h once rendered, which is the answer the problem asked for.
+    expect(
+      toUnit(solved.knowns['vrel']!, state.displayUnits.velocity!),
+    ).toBeCloseTo(30, 6);
   });
 
   it('negates the second body when they close head-on', () => {

@@ -33,7 +33,11 @@ knows with what they're trying to find.
   done that discrimination *for* the student.
 - **Natural-language entry:** type/paste/speak a word problem and have it
   pre-fill the variable form.
-- **Real units** (metric/imperial) via an in-house dimensional-math core.
+- **Real units** (metric/imperial) via an in-house dimensional-math core, and
+  **answers in the units the question used**. A student who writes 120 km/h and
+  reads back 33.3 m/s has been given a correct answer to a question they did
+  not ask. The system decides metric or imperial; the *story* decides km/h over
+  m/s, and one kit governs both reading the input and rendering the result.
 - A distinctive **Tron / low-poly** student-facing UI.
 - Fully **static** deployment (no backend, no API keys, no per-request cost).
 

@@ -1,5 +1,5 @@
 import { type LinkKind } from '../../engine/index.ts';
-import { useKinematicsStore } from '../../state/index.ts';
+import { displayKit, useKinematicsStore } from '../../state/index.ts';
 import { unitSymbol } from '../units.ts';
 import styles from './PhaseEditor.module.css';
 
@@ -22,6 +22,9 @@ const LINK_LABELS: ReadonlyArray<readonly [LinkKind, string]> = [
 export function PhaseEditor() {
   const phases = useKinematicsStore((s) => s.phases);
   const unitSystem = useKinematicsStore((s) => s.unitSystem);
+  const displayUnits = useKinematicsStore((s) => s.displayUnits);
+  // The story's own units, so a field reads back what was typed.
+  const kit = displayKit(unitSystem, displayUnits);
   const story = useKinematicsStore((s) => s.story);
   const unsegmentedStages = useKinematicsStore((s) => s.unsegmentedStages);
   const setPhaseHeight = useKinematicsStore((s) => s.setPhaseHeight);
@@ -32,7 +35,7 @@ export function PhaseEditor() {
 
   if (!story) return null;
 
-  const unit = unitSymbol('x1', unitSystem);
+  const unit = unitSymbol('x1', kit);
 
   // Nothing staged and nothing detected: offer the split rather than showing
   // an empty editor on every ordinary problem.

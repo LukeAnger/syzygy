@@ -125,3 +125,14 @@ export const IMPERIAL: UnitKit = {
 export function unitKit(system: UnitSystem): UnitKit {
   return system === 'imperial' ? IMPERIAL : METRIC;
 }
+
+/**
+ * A kit with some units swapped for the ones a problem was written in.
+ *
+ * A student who types 120 km/h expects an answer in km/h, not 33.3 m/s. Both
+ * are the same quantity and the SI value is unchanged — only the unit the
+ * number is rendered in differs, which is exactly what a kit decides.
+ */
+export function kitWith(base: UnitKit, overrides: Partial<UnitKit>): UnitKit {
+  return { ...base, ...overrides };
+}

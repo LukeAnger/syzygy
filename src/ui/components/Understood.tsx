@@ -1,4 +1,4 @@
-import { type InputKey, useKinematicsStore } from '../../state/index.ts';
+import { type InputKey, displayKit, useKinematicsStore } from '../../state/index.ts';
 import { symbolLatex, unitSymbol, variablesFor } from '../units.ts';
 import { Katex } from './Katex.tsx';
 import styles from './Understood.module.css';
@@ -13,6 +13,9 @@ export function Understood() {
   const inputs = useKinematicsStore((s) => s.inputs);
   const given = useKinematicsStore((s) => s.given);
   const unitSystem = useKinematicsStore((s) => s.unitSystem);
+  const displayUnits = useKinematicsStore((s) => s.displayUnits);
+  // The story's own units, so a field reads back what was typed.
+  const kit = displayKit(unitSystem, displayUnits);
   const setMode = useKinematicsStore((s) => s.setMode);
   const story = useKinematicsStore((s) => s.story);
   const phases = useKinematicsStore((s) => s.phases);
@@ -54,7 +57,7 @@ export function Understood() {
             >
               <Katex tex={symbolLatex(key)} />
               <span className={styles.value}>
-                {inputs[key]} {unitSymbol(key, unitSystem)}
+                {inputs[key]} {unitSymbol(key, kit)}
               </span>
               {assumed ? ' (free fall)' : ''}
             </span>

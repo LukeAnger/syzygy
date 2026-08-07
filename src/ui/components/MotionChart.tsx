@@ -1,9 +1,8 @@
 import 'chart.js/auto';
 import { Line } from 'react-chartjs-2';
 import type { ChartOptions } from 'chart.js';
-import type { UnitSystem } from '../../math/index.ts';
 import type { SolveResult } from '../../engine/index.ts';
-import { unitFactor, unitSymbol } from '../units.ts';
+import { type Units, unitFactor, unitSymbol } from '../units.ts';
 import styles from './MotionChart.module.css';
 
 interface MotionChartProps {
@@ -13,7 +12,7 @@ interface MotionChartProps {
    * contradict the answer, which comes from the last.
    */
   results: SolveResult[];
-  unitSystem: UnitSystem;
+  unitSystem: Units;
 }
 
 const SAMPLES = 40;

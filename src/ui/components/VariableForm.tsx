@@ -1,5 +1,5 @@
 import type { SolveResult } from '../../engine/index.ts';
-import { useKinematicsStore } from '../../state/index.ts';
+import { displayKit, useKinematicsStore } from '../../state/index.ts';
 import { symbolLatex, unitSymbol, variablesFor } from '../units.ts';
 import { Katex } from './Katex.tsx';
 import styles from './VariableForm.module.css';
@@ -15,6 +15,9 @@ interface VariableFormProps {
 export function VariableForm({ result }: VariableFormProps) {
   const inputs = useKinematicsStore((s) => s.inputs);
   const unitSystem = useKinematicsStore((s) => s.unitSystem);
+  const displayUnits = useKinematicsStore((s) => s.displayUnits);
+  // The story's own units, so a field reads back what was typed.
+  const kit = displayKit(unitSystem, displayUnits);
   const setInput = useKinematicsStore((s) => s.setInput);
   const setUnitSystem = useKinematicsStore((s) => s.setUnitSystem);
   const domain = useKinematicsStore((s) => s.domain);
@@ -61,7 +64,7 @@ export function VariableForm({ result }: VariableFormProps) {
               placeholder={solved ? '—' : ''}
               onChange={(e) => setInput(key as never, e.target.value)}
             />
-            <span className={styles.unit}>{unitSymbol(key, unitSystem)}</span>
+            <span className={styles.unit}>{unitSymbol(key, kit)}</span>
           </div>
         );
       })}

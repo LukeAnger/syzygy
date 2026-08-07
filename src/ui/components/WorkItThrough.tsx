@@ -21,7 +21,7 @@ import { type Relevance, relevanceFor } from '../../engine/index.ts';
 import type { SolveResult } from '../../engine/index.ts';
 import type { VariableKey } from '../../state/index.ts';
 import { gradeGivens, gradeTarget, isWorkable } from '../../tutor/grade.ts';
-import { formatVar, summaryFor, symbolLatex } from '../units.ts';
+import { type Units, formatVar, summaryFor, symbolLatex } from '../units.ts';
 import type { DomainId } from '../../domains/index.ts';
 import { Katex } from './Katex.tsx';
 import styles from './WorkItThrough.module.css';
@@ -30,7 +30,7 @@ interface Props {
   asked?: VariableKey;
   given: VariableKey[];
   result: SolveResult;
-  unitSystem: 'metric' | 'imperial';
+  unitSystem: Units;
   domain: DomainId;
   children: ReactNode;
 }

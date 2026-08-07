@@ -9,8 +9,10 @@
 import { create } from 'zustand';
 import {
   type Quantity,
+  type UnitKit,
   type UnitSystem,
   fromUnit,
+  kitWith,
   toUnit,
   unitKit,
 } from '../math/index.ts';
@@ -35,6 +37,7 @@ import {
   type ParseResult,
   type Segmentation,
   describesStages,
+  detectDisplayUnits,
   detectDomain,
   detectSystem,
   isAmbiguousDomain,
@@ -120,8 +123,9 @@ export function buildKnowns(
   inputs: Inputs,
   system: UnitSystem,
   domain: DomainId = 'kinematics-1d',
+  overrides: Partial<UnitKit> = {},
 ): Knowns {
-  const kit = unitKit(system);
+  const kit = displayKit(system, overrides);
   const knowns: Record<string, Quantity> = {};
   for (const key of inputKeys(domain)) {
     if (inputs[key] === undefined) continue;
@@ -134,13 +138,27 @@ export function buildKnowns(
   return knowns;
 }
 
+/**
+ * The kit in force: the system's defaults with the story's own units on top.
+ *
+ * Exported because the same kit has to reach the display layer — rendering in
+ * one unit while parsing in another is how 120 km/h became 33.3 m/s.
+ */
+export function displayKit(
+  system: UnitSystem,
+  overrides: Partial<UnitKit> = {},
+): UnitKit {
+  return kitWith(unitKit(system), overrides);
+}
+
 /** Run the solver over the current inputs. */
 export function solveInputs(
   inputs: Inputs,
   system: UnitSystem,
   domain: DomainId = 'kinematics-1d',
+  overrides: Partial<UnitKit> = {},
 ): SolveResult {
-  return solve(domainOf(domain), buildKnowns(inputs, system, domain));
+  return solve(domainOf(domain), buildKnowns(inputs, system, domain, overrides));
 }
 
 /** One motion segment's start and end height, as the strings a user edits. */
@@ -244,8 +262,12 @@ function quantityToInput(
   key: InputKey,
   quantity: Quantity,
   system: UnitSystem,
+  overrides: Partial<UnitKit> = {},
 ): string {
-  const magnitude = toUnit(quantity, variable(key).displayUnit(unitKit(system)));
+  const magnitude = toUnit(
+    quantity,
+    variable(key).displayUnit(displayKit(system, overrides)),
+  );
   // Trim floating-point fuzz without imposing sig-figs on user-facing inputs.
   return String(Number(magnitude.toFixed(6)));
 }
@@ -255,13 +277,14 @@ export function assignmentsToInputs(
   assignments: Assignment[],
   system: UnitSystem,
   domain: DomainId = 'kinematics-1d',
+  overrides: Partial<UnitKit> = {},
 ): Partial<Inputs> {
   const accepted = new Set<string>(inputKeys(domain));
   const inputs: Partial<Inputs> = {};
   for (const assignment of assignments) {
     if (accepted.has(assignment.variable)) {
       const key = assignment.variable as InputKey;
-      inputs[key] = quantityToInput(key, assignment.quantity, system);
+      inputs[key] = quantityToInput(key, assignment.quantity, system, overrides);
     }
   }
   return inputs;
@@ -380,7 +403,10 @@ function statePatch(
   result: ParseResult,
   domain: DomainId,
 ) {
-  const parsed = assignmentsToInputs(result.assignments, system, domain);
+  // Detected before conversion: the values are written back in the story's own
+  // units, so the form shows 120 rather than 33.333.
+  const displayUnits = detectDisplayUnits(text);
+  const parsed = assignmentsToInputs(result.assignments, system, domain, displayUnits);
   // Phases and the ground-landing default describe one falling object; neither
   // means anything for two bodies on a line.
   const kinematic = domain === 'kinematics-1d';
@@ -423,6 +449,7 @@ function statePatch(
     // instructive; assuming it silently is what a picker would do.
     domain,
     domainAmbiguous: isAmbiguousDomain(text),
+    displayUnits,
     // Undefined for the overwhelming majority of stories, which are one
     // segment; the app then solves exactly as it always has.
     phases: phaseState,
@@ -493,6 +520,14 @@ export interface KinematicsState {
   /** Story hints at two bodies but did not meet the bar for switching. */
   domainAmbiguous: boolean;
   /**
+   * Units the story was written in, overriding the system defaults.
+   *
+   * Governs both directions: a field labelled km/h is read as km/h and its
+   * answer is rendered in km/h. Keeping one kit for input and output is what
+   * stops 120 going in and 33.3 coming back.
+   */
+  displayUnits: Partial<UnitKit>;
+  /**
    * The text in the Storymode box, before it is submitted.
    *
    * Held here rather than in the component so anything can load a problem into
@@ -556,6 +591,7 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   solving: false,
   domain: 'kinematics-1d',
   domainAmbiguous: false,
+  displayUnits: {},
   given: [],
   unusedNumbers: [],
   asked: undefined,
@@ -595,6 +631,9 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   setUnitSystem: (system) =>
     set((state) => ({
       unitSystem: system,
+      // Switching metric/imperial abandons a story-specific unit: km/h has no
+      // imperial counterpart to carry over.
+      displayUnits: {},
       inputs: convertInputs(state.inputs, state.unitSystem, system),
       // Phase heights are display strings too, so they convert with everything
       // else — otherwise switching to feet would reinterpret 30 m as 30 ft.

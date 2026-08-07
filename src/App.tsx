@@ -1,6 +1,7 @@
 import { Suspense, lazy, useMemo } from 'react';
 import {
   type Mode,
+  displayKit,
   solveInputs,
   solvePhaseSequence,
   useKinematicsStore,
@@ -39,14 +40,20 @@ export default function App() {
   // no phase sequence to fall back on.
   const tutorEnabled = useKinematicsStore((s) => s.tutorEnabled);
   const domain = useKinematicsStore((s) => s.domain);
+  const displayUnits = useKinematicsStore((s) => s.displayUnits);
+  // One kit for parsing and rendering, so a km/h problem answers in km/h.
+  const kit = useMemo(
+    () => displayKit(unitSystem, displayUnits),
+    [unitSystem, displayUnits],
+  );
   const story = useKinematicsStore((s) => s.story);
   const staged = useKinematicsStore(
     (s) => s.mode === 'story' && s.unsegmentedStages && !s.phases,
   );
 
   const result = useMemo(
-    () => solveInputs(inputs, unitSystem, domain),
-    [inputs, unitSystem, domain],
+    () => solveInputs(inputs, unitSystem, domain, displayUnits),
+    [inputs, unitSystem, domain, displayUnits],
   );
 
   // Only Storymode can describe staged motion; the manual form is one segment
@@ -99,12 +106,12 @@ export default function App() {
             asked={tutorEnabled && mode === 'story' ? asked : undefined}
             given={given}
             result={result}
-            unitSystem={unitSystem}
+            unitSystem={kit}
             domain={domain}
           >
           <Solution
             result={result}
-            unitSystem={unitSystem}
+            unitSystem={kit}
             asked={asked}
             given={given}
             phaseResult={phaseResult}
@@ -115,7 +122,7 @@ export default function App() {
           </WorkItThrough>
           {/* Position/velocity curves assume one accelerating object. */}
           {domain === 'kinematics-1d' && (
-            <MotionChart results={charted} unitSystem={unitSystem} />
+            <MotionChart results={charted} unitSystem={kit} />
           )}
         </div>
       </div>

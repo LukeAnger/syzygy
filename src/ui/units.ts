@@ -2,6 +2,7 @@
 import {
   type FormatOptions,
   type Quantity,
+  type UnitKit,
   type UnitSystem,
   formatQuantity,
   unitKit,
@@ -29,24 +30,35 @@ export function summaryFor(domain: DomainId): VariableKey[] {
   return summaryKeysOf(domain) as VariableKey[];
 }
 
+/**
+ * A bare system, or a kit that already carries per-problem overrides.
+ *
+ * Accepting both keeps every existing call site valid while letting display
+ * paths pass a kit built from the units the problem was written in.
+ */
+export type Units = UnitSystem | UnitKit;
+
+const kitOf = (units: Units): UnitKit =>
+  typeof units === 'string' ? unitKit(units) : units;
+
 export function symbolLatex(key: VariableKey): string {
   return variable(key).latex;
 }
 
-export function unitSymbol(key: VariableKey, system: UnitSystem): string {
-  return variable(key).displayUnit(unitKit(system)).symbol;
+export function unitSymbol(key: VariableKey, units: Units): string {
+  return variable(key).displayUnit(kitOf(units)).symbol;
 }
 
 /** SI-per-display-unit factor, for converting raw quantities to chart values. */
-export function unitFactor(key: VariableKey, system: UnitSystem): number {
-  return variable(key).displayUnit(unitKit(system)).factor;
+export function unitFactor(key: VariableKey, units: Units): number {
+  return variable(key).displayUnit(kitOf(units)).factor;
 }
 
 export function formatVar(
   key: VariableKey,
   quantity: Quantity,
-  system: UnitSystem,
+  units: Units,
   options?: FormatOptions,
 ): string {
-  return formatQuantity(quantity, variable(key).displayUnit(unitKit(system)), options);
+  return formatQuantity(quantity, variable(key).displayUnit(kitOf(units)), options);
 }
