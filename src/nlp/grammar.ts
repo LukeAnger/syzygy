@@ -14,7 +14,11 @@ import {
   FOOT,
   FOOT_PER_SECOND,
   FOOT_PER_SECOND_SQUARED,
+  KILOMETRE,
+  KILOMETRE_PER_HOUR,
   LENGTH,
+  MILE,
+  MILE_PER_HOUR,
   METRE,
   METRE_PER_SECOND,
   METRE_PER_SECOND_SQUARED,
@@ -41,6 +45,11 @@ export const UNITS: Record<string, Unit> = {
   'ft/s': FOOT_PER_SECOND,
   'm/s2': METRE_PER_SECOND_SQUARED,
   'ft/s2': FOOT_PER_SECOND_SQUARED,
+  // Road units: readable, but not display units — see math/units.ts.
+  'km/h': KILOMETRE_PER_HOUR,
+  mph: MILE_PER_HOUR,
+  km: KILOMETRE,
+  mi: MILE,
 };
 
 type Sign = 'positive' | 'negative' | 'signed';
@@ -79,8 +88,8 @@ function nextNumber(
 
 /** Canonical unit tokens the tokenizer emits, grouped by system. */
 const SYSTEM_TOKENS: Record<UnitSystem, string[]> = {
-  imperial: ['ft', 'ft/s', 'ft/s2'],
-  metric: ['m', 'm/s', 'm/s2'],
+  imperial: ['ft', 'ft/s', 'ft/s2', 'mph', 'mi'],
+  metric: ['m', 'm/s', 'm/s2', 'km/h', 'km'],
 };
 
 /**

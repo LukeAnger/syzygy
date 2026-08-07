@@ -44,6 +44,25 @@ export const SECOND = defineUnit('s', 1, TIME);
 export const METRE_PER_SECOND = defineUnit('m/s', 1, VELOCITY);
 export const FOOT_PER_SECOND = defineUnit('ft/s', 0.3048, VELOCITY);
 
+/**
+ * Road speeds. Input units, not display units.
+ *
+ * Vehicle problems are written in km/h and mph almost without exception, and
+ * until now neither could be read at all — "120 km/h" simply failed to parse,
+ * in every domain. These convert to SI on the way in like any other unit.
+ *
+ * Deliberately absent from `METRIC`/`IMPERIAL` below, so results still display
+ * in m/s and ft/s. Whether an answer should come back in the unit the question
+ * was asked in is a real question, but it is a display concern and a bigger
+ * one than parsing — see the note on `UnitKit`.
+ */
+export const KILOMETRE_PER_HOUR = defineUnit('km/h', 1000 / 3600, VELOCITY);
+export const MILE_PER_HOUR = defineUnit('mph', 1609.344 / 3600, VELOCITY);
+
+// Length, road scale
+export const KILOMETRE = defineUnit('km', 1000, LENGTH);
+export const MILE = defineUnit('mi', 1609.344, LENGTH);
+
 // Acceleration
 export const METRE_PER_SECOND_SQUARED = defineUnit('m/s²', 1, ACCELERATION);
 export const FOOT_PER_SECOND_SQUARED = defineUnit('ft/s²', 0.3048, ACCELERATION);
@@ -73,6 +92,15 @@ export function toUnit(q: Quantity, unit: Unit): number {
 export type UnitSystem = 'metric' | 'imperial';
 
 /** The preferred display units for each measured dimension, per system. */
+/**
+ * The units results are *displayed* in, per system.
+ *
+ * Distinct from the units a problem may be *written* in. km/h, mph, km and
+ * miles all parse, but a solved velocity still comes back in m/s or ft/s.
+ * Answering in the unit the question used would arguably be friendlier, but it
+ * means tracking a per-problem display preference rather than a per-system one,
+ * and that is a larger change than reading the unit in the first place.
+ */
 export interface UnitKit {
   length: Unit;
   time: Unit;
