@@ -498,3 +498,59 @@ describe('store: the ground-landing default', () => {
     expect(useKinematicsStore.getState().inputs.x2).toBe('0');
   });
 });
+
+describe('store: domain detection', () => {
+  beforeEach(() => useKinematicsStore.getState().reset());
+
+  it('switches domain for a two-vehicle problem', () => {
+    useKinematicsStore
+      .getState()
+      .loadStory(
+        'A motorcycle at 120 km/h passes a car at 90 km/h. From the point of ' +
+          'view of a passenger on the car, what is the velocity of the motorcycle?',
+      );
+    expect(useKinematicsStore.getState().domain).toBe('relative-velocity');
+  });
+
+  it('stays in kinematics for a free-fall story', () => {
+    useKinematicsStore.getState().loadStory('a ball is dropped from a height of 45 m');
+    expect(useKinematicsStore.getState().domain).toBe('kinematics-1d');
+    expect(useKinematicsStore.getState().domainAmbiguous).toBe(false);
+  });
+
+  it('flags a two-body hint that did not meet the bar', () => {
+    useKinematicsStore.getState().loadStory('Two cars 500 m apart. One travels at 30 m/s.');
+    expect(useKinematicsStore.getState().domain).toBe('kinematics-1d');
+    expect(useKinematicsStore.getState().domainAmbiguous).toBe(true);
+  });
+
+  /** Field sets differ, so carrying values over would leave stale inputs. */
+  it('blanks the form when the domain is overridden', () => {
+    useKinematicsStore.getState().loadStory('a ball is dropped from a height of 45 m');
+    expect(useKinematicsStore.getState().inputs['x1']).toBe('45');
+
+    useKinematicsStore.getState().setDomain('relative-velocity');
+    const state = useKinematicsStore.getState();
+    expect(state.domain).toBe('relative-velocity');
+    expect(state.inputs['x1'] ?? '').toBe('');
+    expect(state.given).toEqual([]);
+  });
+
+  it('is a no-op when the chosen domain is already active', () => {
+    useKinematicsStore.getState().loadStory('a ball is dropped from a height of 45 m');
+    useKinematicsStore.getState().setDomain('kinematics-1d');
+    expect(useKinematicsStore.getState().inputs['x1']).toBe('45');
+  });
+
+  it('solves a relative-velocity problem once the domain is active', () => {
+    const state = useKinematicsStore.getState();
+    state.setDomain('relative-velocity');
+    for (const [key, value] of [['xa', '0'], ['xb', '600'], ['va', '30'], ['vb', '-20']] as const) {
+      useKinematicsStore.getState().setInput(key, value);
+    }
+    const current = useKinematicsStore.getState();
+    const solved = solveInputs(current.inputs, current.unitSystem, current.domain);
+    expect(solved.knowns['vrel']?.value).toBeCloseTo(50, 9);
+    expect(solved.knowns['t']?.value).toBeCloseTo(12, 9);
+  });
+});

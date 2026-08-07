@@ -1,5 +1,5 @@
 import { type InputKey, useKinematicsStore } from '../../state/index.ts';
-import { VARIABLES, symbolLatex, unitSymbol } from '../units.ts';
+import { symbolLatex, unitSymbol, variablesFor } from '../units.ts';
 import { Katex } from './Katex.tsx';
 import styles from './Understood.module.css';
 
@@ -16,6 +16,7 @@ export function Understood() {
   const setMode = useKinematicsStore((s) => s.setMode);
   const story = useKinematicsStore((s) => s.story);
   const phases = useKinematicsStore((s) => s.phases);
+  const variables = variablesFor(useKinematicsStore((s) => s.domain));
 
   if (!story) {
     return (
@@ -35,9 +36,9 @@ export function Understood() {
   // Staged motion has no single pair of positions — each segment has its own,
   // and they are edited below. Showing a flat x₁/x₂ here would contradict the
   // phase list and describe motion the app is not actually solving.
-  const shown: InputKey[] = VARIABLES.filter(
+  const shown = variables.filter(
     (key) =>
-      inputs[key].trim() !== '' && !(phases && (key === 'x1' || key === 'x2')),
+      (inputs[key] ?? '').trim() !== '' && !(phases && (key === 'x1' || key === 'x2')),
   );
 
   return (

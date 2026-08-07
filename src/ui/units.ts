@@ -6,28 +6,28 @@ import {
   formatQuantity,
   unitKit,
 } from '../math/index.ts';
-import { kinematics1D } from '../domains/kinematics-1d/index.ts';
-import type { InputKey, VariableKey } from '../state/index.ts';
+import { type DomainId, findVariable, inputKeysOf, summaryKeysOf } from '../domains/index.ts';
+import type { VariableKey } from '../state/index.ts';
 
+/**
+ * Looked up across every domain rather than one.
+ *
+ * Keys are near-disjoint — only `t` is shared, and identically defined — so
+ * formatting a value never needs to know which domain produced it.
+ */
 function variable(key: VariableKey) {
-  const found = kinematics1D.variables.find((v) => v.key === key);
-  if (!found) throw new Error(`unknown variable ${key}`);
-  return found;
+  return findVariable(key);
 }
 
-/** The variables shown as form fields (displacement is derived, not entered). */
-export const VARIABLES: InputKey[] = ['x1', 'x2', 'v0', 'v', 'a', 't'];
+/** Form fields for a domain: everything it declares except its results. */
+export function variablesFor(domain: DomainId): VariableKey[] {
+  return inputKeysOf(domain) as VariableKey[];
+}
 
-/** All variables to show in the solution summary, including derived Δx. */
-export const SUMMARY_VARIABLES: VariableKey[] = [
-  'x1',
-  'x2',
-  'v0',
-  'v',
-  'a',
-  't',
-  'dx',
-];
+/** Everything to list in the solution summary, results included. */
+export function summaryFor(domain: DomainId): VariableKey[] {
+  return summaryKeysOf(domain) as VariableKey[];
+}
 
 export function symbolLatex(key: VariableKey): string {
   return variable(key).latex;

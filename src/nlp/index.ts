@@ -5,3 +5,4 @@ export * from './grammar.ts';
 export * from './parse.ts';
 export * from './question.ts';
 export * from './segment.ts';
+export * from './domain.ts';

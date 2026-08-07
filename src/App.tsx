@@ -12,6 +12,7 @@ import { Storymode } from './ui/components/Storymode.tsx';
 import { Solution } from './ui/components/Solution.tsx';
 import { MotionChart } from './ui/components/MotionChart.tsx';
 import { WorkItThrough } from './ui/components/WorkItThrough.tsx';
+import { DomainBanner } from './ui/components/DomainBanner.tsx';
 import styles from './App.module.css';
 
 // Lazy behind a statically-false flag in production, so the whole dev panel —
@@ -37,14 +38,15 @@ export default function App() {
   // Only meaningful when the parser could not split a staged story *and* has
   // no phase sequence to fall back on.
   const tutorEnabled = useKinematicsStore((s) => s.tutorEnabled);
+  const domain = useKinematicsStore((s) => s.domain);
   const story = useKinematicsStore((s) => s.story);
   const staged = useKinematicsStore(
     (s) => s.mode === 'story' && s.unsegmentedStages && !s.phases,
   );
 
   const result = useMemo(
-    () => solveInputs(inputs, unitSystem),
-    [inputs, unitSystem],
+    () => solveInputs(inputs, unitSystem, domain),
+    [inputs, unitSystem, domain],
   );
 
   // Only Storymode can describe staged motion; the manual form is one segment
@@ -85,6 +87,8 @@ export default function App() {
 
       <div className={styles.grid}>
         <div className={styles.left}>
+          {/* Above both modes: the manual form's fields depend on it too. */}
+          <DomainBanner />
           {mode === 'story' ? <Storymode /> : <VariableForm result={result} />}
         </div>
         <div className={styles.right}>
@@ -105,6 +109,7 @@ export default function App() {
             phaseResult={phaseResult}
             phaseLinks={phases?.links}
             staged={staged}
+            domain={domain}
           />
           </WorkItThrough>
           <MotionChart

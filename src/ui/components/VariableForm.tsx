@@ -1,6 +1,6 @@
 import type { SolveResult } from '../../engine/index.ts';
-import { type InputKey, useKinematicsStore } from '../../state/index.ts';
-import { VARIABLES, symbolLatex, unitSymbol } from '../units.ts';
+import { useKinematicsStore } from '../../state/index.ts';
+import { symbolLatex, unitSymbol, variablesFor } from '../units.ts';
 import { Katex } from './Katex.tsx';
 import styles from './VariableForm.module.css';
 
@@ -17,6 +17,7 @@ export function VariableForm({ result }: VariableFormProps) {
   const unitSystem = useKinematicsStore((s) => s.unitSystem);
   const setInput = useKinematicsStore((s) => s.setInput);
   const setUnitSystem = useKinematicsStore((s) => s.setUnitSystem);
+  const variables = variablesFor(useKinematicsStore((s) => s.domain));
   const loadFreeFall = useKinematicsStore((s) => s.loadFreeFall);
   const reset = useKinematicsStore((s) => s.reset);
 
@@ -45,7 +46,7 @@ export function VariableForm({ result }: VariableFormProps) {
         Enter the values you know. Blank fields are solved automatically.
       </p>
 
-      {VARIABLES.map((key: InputKey) => {
+      {variables.map((key) => {
         const solved = solvedKeys.has(key);
         return (
           <div key={key} className={styles.row}>
@@ -57,7 +58,7 @@ export function VariableForm({ result }: VariableFormProps) {
               value={inputs[key]}
               inputMode="decimal"
               placeholder={solved ? '—' : ''}
-              onChange={(e) => setInput(key, e.target.value)}
+              onChange={(e) => setInput(key as never, e.target.value)}
             />
             <span className={styles.unit}>{unitSymbol(key, unitSystem)}</span>
           </div>

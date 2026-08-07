@@ -30,6 +30,11 @@ export interface Variable {
   /** Preferred display unit for a given unit system. */
   displayUnit(kit: UnitKit): Unit;
   readonly physical?: PhysicalConstraint;
+  /**
+   * A result rather than an input — computed from others and never typed in.
+   * Kept out of the variable form; still shown in the summary.
+   */
+  readonly derived?: boolean;
 }
 
 export type Knowns = Readonly<Record<VariableKey, Quantity>>;

@@ -124,6 +124,8 @@ export const variables: Variable[] = [
     latex: 'x_m',
     dimension: LENGTH,
     displayUnit: (kit) => kit.length,
+    // Where they meet is the answer, not something a problem states.
+    derived: true,
   },
 ];
 

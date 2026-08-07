@@ -23,13 +23,21 @@ import {
   solve,
   solvePhases,
 } from '../engine/index.ts';
-import { kinematics1D } from '../domains/kinematics-1d/index.ts';
+import {
+  type DomainId,
+  domainOf,
+  findVariable,
+  inputKeysOf,
+} from '../domains/index.ts';
+import { kinematics1D } from './../domains/kinematics-1d/index.ts';
 import {
   type Assignment,
   type ParseResult,
   type Segmentation,
   describesStages,
+  detectDomain,
   detectSystem,
+  isAmbiguousDomain,
   parse,
   segmentPhases,
 } from '../nlp/index.ts';
@@ -49,14 +57,49 @@ import {
   shouldCollect,
 } from '../telemetry/collector.ts';
 
-/** Every solver variable, including the derived displacement `dx`. */
-export type VariableKey = 'v0' | 'v' | 'a' | 't' | 'x1' | 'x2' | 'dx';
-/** The variables a user actually enters — displacement is derived, not typed. */
-export type InputKey = Exclude<VariableKey, 'dx'>;
-export type Inputs = Record<InputKey, string>;
+/** Every solver variable across every domain. */
+export type VariableKey =
+  // 1-D kinematics
+  | 'v0'
+  | 'v'
+  | 'a'
+  | 't'
+  | 'x1'
+  | 'x2'
+  | 'dx'
+  // relative velocity
+  | 'xa'
+  | 'xb'
+  | 'va'
+  | 'vb'
+  | 'vrel'
+  | 'd'
+  | 'xm';
+
+/** The variables a user actually enters — results are derived, not typed. */
+export type InputKey = Exclude<VariableKey, 'dx' | 'xm'>;
+
+/**
+ * Form values, keyed loosely.
+ *
+ * Which fields exist depends on the active domain, so this cannot be a closed
+ * record over one domain's keys. Reads use `?? ''` rather than assuming a key
+ * is present.
+ */
+export type Inputs = Record<string, string>;
 
 /** Display / form order. */
 export const INPUT_KEYS: InputKey[] = ['x1', 'x2', 'v0', 'v', 'a', 't'];
+
+/** Form fields for whichever domain is active. */
+export function inputKeys(domain: DomainId): InputKey[] {
+  return inputKeysOf(domain) as InputKey[];
+}
+
+/** Blank inputs shaped for a domain, so switching never leaves stale fields. */
+export function blankInputs(domain: DomainId): Inputs {
+  return Object.fromEntries(inputKeys(domain).map((k) => [k, ''])) as Inputs;
+}
 
 /** Free fall is the default landing preset: gravity in, everything else blank. */
 export const DEFAULT_INPUTS: Inputs = {
@@ -69,17 +112,20 @@ export const DEFAULT_INPUTS: Inputs = {
 };
 
 function variable(key: VariableKey) {
-  const found = kinematics1D.variables.find((v) => v.key === key);
-  if (!found) throw new Error(`unknown variable ${key}`);
-  return found;
+  return findVariable(key);
 }
 
 /** Parse the non-empty inputs into a `Knowns` map of SI-based quantities. */
-export function buildKnowns(inputs: Inputs, system: UnitSystem): Knowns {
+export function buildKnowns(
+  inputs: Inputs,
+  system: UnitSystem,
+  domain: DomainId = 'kinematics-1d',
+): Knowns {
   const kit = unitKit(system);
   const knowns: Record<string, Quantity> = {};
-  for (const key of INPUT_KEYS) {
-    const raw = inputs[key].trim();
+  for (const key of inputKeys(domain)) {
+    if (inputs[key] === undefined) continue;
+    const raw = (inputs[key] ?? '').trim();
     if (raw === '') continue;
     const value = Number(raw);
     if (!Number.isFinite(value)) continue;
@@ -89,8 +135,12 @@ export function buildKnowns(inputs: Inputs, system: UnitSystem): Knowns {
 }
 
 /** Run the solver over the current inputs. */
-export function solveInputs(inputs: Inputs, system: UnitSystem): SolveResult {
-  return solve(kinematics1D, buildKnowns(inputs, system));
+export function solveInputs(
+  inputs: Inputs,
+  system: UnitSystem,
+  domain: DomainId = 'kinematics-1d',
+): SolveResult {
+  return solve(domainOf(domain), buildKnowns(inputs, system, domain));
 }
 
 /** One motion segment's start and end height, as the strings a user edits. */
@@ -226,7 +276,7 @@ export function convertInputs(
   const toKit = unitKit(to);
   const next: Inputs = { ...inputs };
   for (const key of INPUT_KEYS) {
-    const raw = inputs[key].trim();
+    const raw = (inputs[key] ?? '').trim();
     if (raw === '') continue;
     const value = Number(raw);
     if (!Number.isFinite(value)) continue;
@@ -358,6 +408,10 @@ function statePatch(system: UnitSystem, text: string, result: ParseResult) {
     // The engine's VariableKey is a loose string; the store's is the closed
     // union, and the parser only ever targets a member of it.
     asked: result.target as VariableKey | undefined,
+    // Read from the story, not chosen. Naming the classification is itself
+    // instructive; assuming it silently is what a picker would do.
+    domain: detectDomain(text),
+    domainAmbiguous: isAmbiguousDomain(text),
     // Undefined for the overwhelming majority of stories, which are one
     // segment; the app then solves exactly as it always has.
     phases: phaseState,
@@ -416,6 +470,15 @@ export interface KinematicsState {
   /** What the last parse did, per engine. Drives the dev panel. */
   diagnostics?: ParseDiagnostics;
   /**
+   * Which equation pack is solving. Detected from the story rather than
+   * chosen: classifying a problem is part of what a student is learning, and a
+   * picker would ask them to do it before the app helps. Overridable, because
+   * detection can be wrong and being stuck with the wrong solver is worse.
+   */
+  domain: DomainId;
+  /** Story hints at two bodies but did not meet the bar for switching. */
+  domainAmbiguous: boolean;
+  /**
    * The text in the Storymode box, before it is submitted.
    *
    * Held here rather than in the component so anything can load a problem into
@@ -449,6 +512,8 @@ export interface KinematicsState {
   /** Parse with whichever engine is active (rule, or smart when ready). */
   submitStory(text: string): Promise<void>;
   setDraft(draft: string): void;
+  /** Override the detected domain; blanks the form, whose fields change. */
+  setDomain(domain: DomainId): void;
   loadStory(text: string): void;
   enableSmart(): Promise<void>;
   disableSmart(): void;
@@ -475,6 +540,8 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   story: '',
   draft: '',
   solving: false,
+  domain: 'kinematics-1d',
+  domainAmbiguous: false,
   given: [],
   unusedNumbers: [],
   asked: undefined,
@@ -492,6 +559,21 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   setMode: (mode) => set({ mode }),
 
   setDraft: (draft) => set({ draft }),
+
+  setDomain: (domain) =>
+    set((state) =>
+      state.domain === domain
+        ? {}
+        : {
+            domain,
+            // Field sets differ between domains, so carrying values across
+            // would leave a stale x1 in a problem that has no x1.
+            inputs: { ...blankInputs(domain), a: state.inputs['a'] ?? '' },
+            given: [],
+            diagnostics: undefined,
+            domainAmbiguous: false,
+          },
+    ),
 
   setInput: (key, value) =>
     set((state) => ({ inputs: { ...state.inputs, [key]: value } })),
@@ -599,8 +681,8 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
         return {
           phases: {
             phases: [
-              { x1: state.inputs.x1, x2: state.inputs.x2 },
-              { x1: state.inputs.x2, x2: '' },
+              { x1: state.inputs['x1'] ?? '', x2: state.inputs['x2'] ?? '' },
+              { x1: state.inputs['x2'] ?? '', x2: '' },
             ],
             links: [{ kind: 'rest' as LinkKind }],
           },
@@ -636,7 +718,7 @@ export const useKinematicsStore = create<KinematicsState>((set, get) => ({
   setShareConsent: (consent) => set({ shareConsent: consent }),
 
   loadFreeFall: () =>
-    set((state) => ({ inputs: { ...state.inputs, a: DEFAULT_INPUTS.a } })),
+    set((state) => ({ inputs: { ...state.inputs, a: DEFAULT_INPUTS['a'] ?? '' } })),
 
   reset: () =>
     set({

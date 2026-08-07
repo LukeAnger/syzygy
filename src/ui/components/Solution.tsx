@@ -7,7 +7,8 @@ import {
   relevanceFor,
 } from '../../engine/index.ts';
 import type { VariableKey } from '../../state/index.ts';
-import { SUMMARY_VARIABLES, formatVar, symbolLatex } from '../units.ts';
+import { formatVar, summaryFor, symbolLatex } from '../units.ts';
+import type { DomainId } from '../../domains/index.ts';
 import { Katex } from './Katex.tsx';
 import styles from './Solution.module.css';
 
@@ -27,6 +28,8 @@ interface SolutionProps {
   phaseLinks?: PhaseLink[];
   /** Story stages itself but could not be segmented — the answer is untrustworthy. */
   staged?: boolean;
+  /** Which equation pack produced this — decides which variables to list. */
+  domain?: DomainId;
 }
 
 /** The worked steps of one solve, KaTeX-typeset. */
@@ -129,7 +132,9 @@ export function Solution({
   phaseResult,
   phaseLinks,
   staged = false,
+  domain = 'kinematics-1d',
 }: SolutionProps) {
+  const summaryVariables = summaryFor(domain);
   const multi = phaseResult && phaseResult.phases.length > 1;
   // The story ends where the last segment ends, so that is where an answer
   // about the end of the motion lives.
@@ -156,7 +161,7 @@ export function Solution({
   if (empty) {
     // Acceleration is always present as the free-fall default, so it doesn't
     // count as something the user supplied.
-    const supplied = SUMMARY_VARIABLES.filter((key) => key !== 'a' && knowns[key]);
+    const supplied = summaryVariables.filter((key) => key !== 'a' && knowns[key]);
     return (
       <section className={styles.panel}>
         <h2 className={styles.title}>Solution</h2>
@@ -339,7 +344,7 @@ export function Solution({
       )}
 
       <div className={styles.summary}>
-        {SUMMARY_VARIABLES.filter((key) => knowns[key]).map((key) => (
+        {summaryVariables.filter((key) => knowns[key]).map((key) => (
           <span key={key} className={styles.summaryItem}>
             <Katex tex={symbolLatex(key)} /> ={' '}
             {formatVar(key, knowns[key]!, unitSystem)}

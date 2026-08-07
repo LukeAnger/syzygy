@@ -597,6 +597,17 @@ Enabled by the layered design; **not** built in v1.
   through grammar coverage the corpus made visible. Still needed: many more
   cases, and a scored harness for smart parse (hand-run, since CI has no
   WebGPU). The collected prompts feed this.
+- 🟡 **More domains.** `relative-velocity` is the second pack, and adding it
+  needed no engine change — the claim in §4.3 held. Which pack solves a story
+  is **detected, not chosen**: a picker would ask a student to classify the
+  problem before the app helps, and recognising "this is relative velocity" is
+  part of what they are learning. Detection is conservative (a two-body cue
+  *and* two stated speeds, since "passes a marker" plus one speed is still free
+  fall), names its verdict on screen so the classification is visible, and is
+  overridable because being stuck with the wrong equations is worse than being
+  asked. Still to come: two-body parsing, so a story like "a motorcycle at
+  120 km/h passes a car at 90 km/h" fills the fields on its own. Phases,
+  segmentation and the tutor remain kinematics-only.
 - ⬜ Ingest endpoint + batch rule-suggestion pipeline (out of static-app scope).
 - 🟢 **Multi-phase motion.** *"Drops off a roof at 150 m onto another roof 30 m
   high, then rolls off and falls to the ground — how fast is it going when it

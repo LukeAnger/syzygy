@@ -1,0 +1,61 @@
+.wrap {
+  margin-bottom: 0.9rem;
+  padding: 0.8rem 1rem;
+  border: var(--edge);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.label {
+  margin-bottom: 0.5rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.7rem;
+  background: var(--bg);
+  border: var(--edge);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:hover {
+  border-color: var(--panel-edge-strong);
+  color: var(--text);
+}
+
+.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: var(--glow);
+}
+
+/* The plain-language gloss is the part that teaches the classification. */
+.blurb {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.ambiguous {
+  margin: 0.6rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--accent-2);
+}
