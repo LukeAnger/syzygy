@@ -138,10 +138,14 @@ Deliberately written in loose student prose ("thats", no comma splices tidied)
 
 ## Relative velocity
 
-From a standard problem set, which turned out to be a useful scope check: of
-seven problems on the page, **one is solvable today and five need capabilities
-the app does not have**. Relative velocity as taught is largely a 2-D vector
-topic; the `relative-velocity` pack is 1-D.
+From a standard problem set, which turned out to be a useful scope check. When
+it was first run, **one of the seven was solvable and five needed capabilities
+the app did not have** — relative velocity as taught is largely a 2-D vector
+topic, and the `relative-velocity` pack is 1-D.
+
+Three are solvable now: RV1 and RV2 below, and RV3 in the 2-D section. Of the
+remaining four, two state every quantity as a letter, one is conceptual with no
+quantities at all, and one is rotational kinematics.
 
 ### RV1. Two vehicles, one overtaking
 
@@ -158,19 +162,25 @@ positionally, `asked` resolved to `v_rel`, answer rendered in km/h.
 A ball is kicked off the back of a pickup truck traveling at 50 km/h. A pedestrian on the ground sees the ball hit the pavement and then bounce straight up. What was the velocity of the ball relative to the truck?
 ```
 
-**Answer: 50 km/h, opposite to the truck's travel.** In scope in principle —
-one dimension, two bodies — but it needs two things the parser cannot do:
+**Answer: 50 km/h, opposite to the truck's travel.** Works end to end now. It
+needed the two things this page previously listed as gaps:
 
-- **A velocity stated in words, not numbers.** "Bounce straight up" means the
-  ball has *no horizontal velocity relative to the ground*, so `v_a = 0`. The
-  only number in the problem belongs to the other body.
 - **The question naming which body is which.** "Velocity of the ball relative
-  to the truck" makes the truck the reference frame, so it is body B — but the
-  truck is mentioned *first*, and the positional rule would make it body A and
-  invert the answer.
+  to the truck" makes the truck the reference frame, so it is body B — even
+  though the truck is mentioned *first* and word order would make it body A and
+  invert the answer. `namedFrame` reads the roles out of the phrase and outranks
+  position; a story that names no frame falls through to word order unchanged,
+  which is how RV1 still gives 30 km/h.
+- **A velocity stated in words, not numbers.** "Bounce straight up" means the
+  ball has no horizontal velocity relative to the ground, so `v_a = 0`. The only
+  number in the problem belongs to the other body.
 
-That second one is the tractable half, and general: "velocity of X relative to
-Y" appears in most problems of this kind, and it should outrank word order.
+That second one also had to reach *detection*, which required two stated speeds
+and this problem only has one. The bar now counts velocity **facts**: a body
+described as having no motion along the line has been given a velocity as
+surely as one given a number. Only counted inside a named frame, since loose
+stillness phrases ("released at rest") are ordinary free-fall wording and
+letting them count anywhere would drag one-object problems across the line.
 
 ### Out of scope
 

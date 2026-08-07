@@ -623,6 +623,21 @@ Enabled by the layered design; **not** built in v1.
   Phases, segmentation, the ground-landing default, the motion chart and the
   free-fall preset are all one-object ideas and stay switched off elsewhere.
 
+  Word order is not the last word on which body is which. "The velocity of the
+  ball relative to the truck" names the roles outright, and it has to outrank
+  position, because the truck is mentioned first and is nonetheless the *frame*
+  — reading it positionally returns the right magnitude with the sign inverted.
+  `namedFrame` reads the two head nouns out of the construction and attributes
+  each stated speed to whichever of them it sits closest behind. A story that
+  names no frame falls through to word order exactly as before.
+
+  A velocity can also be stated in words. "Bounces straight up" says the ball
+  has none along the line of travel, and that is the only way one such problem
+  gives its second value. Detection counts it: the second bar is velocity
+  *facts*, not numbers. Restricted to named frames, because loose stillness
+  phrases ("released at rest") are ordinary free-fall wording and counting them
+  anywhere would drag one-object problems across the line for a word.
+
   **`relative-velocity-2d`** is the third pack, prompted by a real problem set
   where five of seven questions turned out to need a plane rather than a line.
   It models one relation — `R = V₁ + V₂` — because composition and relative

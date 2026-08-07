@@ -114,16 +114,9 @@ export const DEV_GROUPS: readonly DevGroup[] = [
     domain: 'relative-velocity',
     problems: [
       { id: 'rv1-two-vehicles', text: RV1 },
-      {
-        id: 'rv2-inferred-zero',
-        text: RV2,
-        // Two gaps, both documented: "bounce straight up" is a velocity stated
-        // in words, so only one speed is numeric and detection's second bar is
-        // never cleared; and "velocity of the ball relative to the truck"
-        // should outrank word order in deciding which body is which.
-        detects: 'kinematics-1d',
-        gap: 'one numeric speed only — reads as kinematics',
-      },
+      // Was an override until the named-frame rule landed: the truck is named
+      // first but is the *frame*, and the ball's velocity is given in words.
+      { id: 'rv2-inferred-zero', text: RV2 },
     ],
   },
   {

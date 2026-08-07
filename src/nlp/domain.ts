@@ -14,6 +14,7 @@
  */
 import { measuredNumbers } from './grammar.ts';
 import { MEDIUM_CUES, isCrossing } from './grammar-2d.ts';
+import { framedVelocityFacts } from './grammar-relative.ts';
 import { defaultTokenizer } from './tokenizer.ts';
 import { VELOCITY, dimensionsEqual } from '../math/index.ts';
 import type { Token } from './types.ts';
@@ -62,6 +63,23 @@ function velocityCount(tokens: Token[]): number {
 }
 
 /**
+ * Velocity facts, which is what the second bar is really counting.
+ *
+ * Usually that means two numbers with speed units. But a body's velocity can be
+ * stated in words — "the ball bounces straight up" says it has none along the
+ * line of travel — and a story that gives one number and one such phrase has
+ * described two bodies just as completely as one giving two numbers.
+ *
+ * Only counted inside a named frame ("velocity of X relative to Y"), which is
+ * a strong two-body signal in its own right. Loose stillness phrases are common
+ * in one-object problems, and letting them count anywhere would pull free-fall
+ * stories across the line for a word.
+ */
+function velocityFacts(tokens: Token[]): number {
+  return Math.max(velocityCount(tokens), framedVelocityFacts(tokens));
+}
+
+/**
  * Two dimensions, on the same two-bar principle as the one above.
  *
  * The bars are a moving medium and a crossing, and they have to appear
@@ -102,7 +120,7 @@ export function detectDomain(text: string): DomainId {
   const hasCue = tokens.some((_, i) =>
     RELATIVE_CUES.some((cue) => phraseAt(tokens, i, cue)),
   );
-  return hasCue && velocityCount(tokens) >= 2 ? 'relative-velocity' : 'kinematics-1d';
+  return hasCue && velocityFacts(tokens) >= 2 ? 'relative-velocity' : 'kinematics-1d';
 }
 
 /**
