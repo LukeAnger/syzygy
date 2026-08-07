@@ -139,6 +139,51 @@ export function sqrt(a: Quantity): Quantity {
 }
 
 /** True when both quantities share a dimension. */
+/**
+ * Trigonometry, for resolving a vector into components and back.
+ *
+ * Angles are dimensionless and held in radians, the way the maths works;
+ * degrees are a display unit like any other (see `DEGREE`). Taking the sine of
+ * a length is a modelling error rather than a rounding one, so it throws
+ * instead of coercing.
+ */
+function requireAngle(q: Quantity, op: string): number {
+  if (!isDimensionless(q)) {
+    throw new DimensionError(`${op} needs an angle`, q.dimension, DIMENSIONLESS);
+  }
+  return q.value;
+}
+
+export function sin(angle: Quantity): Quantity {
+  return scalar(Math.sin(requireAngle(angle, 'sin')));
+}
+
+export function cos(angle: Quantity): Quantity {
+  return scalar(Math.cos(requireAngle(angle, 'cos')));
+}
+
+/**
+ * The angle of the vector (x, y), as a dimensionless quantity in radians.
+ *
+ * `atan2` rather than `atan(y/x)` so all four quadrants are distinguished — a
+ * velocity pointing south-west must not report the same heading as one pointing
+ * north-east.
+ */
+export function atan2(y: Quantity, x: Quantity): Quantity {
+  if (!compatible(y, x)) {
+    throw new DimensionError('atan2 needs matching dimensions', y.dimension, x.dimension);
+  }
+  return scalar(Math.atan2(y.value, x.value));
+}
+
+/** Length of the vector (x, y), in the components' own dimension. */
+export function hypot(x: Quantity, y: Quantity): Quantity {
+  if (!compatible(x, y)) {
+    throw new DimensionError('hypot needs matching dimensions', x.dimension, y.dimension);
+  }
+  return quantity(Math.hypot(x.value, y.value), x.dimension);
+}
+
 export function compatible(a: Quantity, b: Quantity): boolean {
   return dimensionsEqual(a.dimension, b.dimension);
 }

@@ -9,6 +9,7 @@
 import {
   type Dimension,
   ACCELERATION,
+  DIMENSIONLESS,
   LENGTH,
   TIME,
   VELOCITY,
@@ -59,6 +60,16 @@ export const FOOT_PER_SECOND = defineUnit('ft/s', 0.3048, VELOCITY);
 export const KILOMETRE_PER_HOUR = defineUnit('km/h', 1000 / 3600, VELOCITY);
 export const MILE_PER_HOUR = defineUnit('mph', 1609.344 / 3600, VELOCITY);
 
+/**
+ * Angles. Dimensionless, held in radians, shown in degrees.
+ *
+ * Degrees are the unit every problem is written in and every answer is
+ * expected in; radians are simply what the trigonometry runs on, so the split
+ * is the same input-versus-display distinction as km/h against m/s.
+ */
+export const RADIAN = defineUnit('rad', 1, DIMENSIONLESS);
+export const DEGREE = defineUnit('°', Math.PI / 180, DIMENSIONLESS);
+
 // Length, road scale
 export const KILOMETRE = defineUnit('km', 1000, LENGTH);
 export const MILE = defineUnit('mi', 1609.344, LENGTH);
@@ -106,6 +117,8 @@ export interface UnitKit {
   time: Unit;
   velocity: Unit;
   acceleration: Unit;
+  /** Degrees in both systems — nobody states a heading in radians. */
+  angle: Unit;
 }
 
 export const METRIC: UnitKit = {
@@ -113,6 +126,7 @@ export const METRIC: UnitKit = {
   time: SECOND,
   velocity: METRE_PER_SECOND,
   acceleration: METRE_PER_SECOND_SQUARED,
+  angle: DEGREE,
 };
 
 export const IMPERIAL: UnitKit = {
@@ -120,6 +134,7 @@ export const IMPERIAL: UnitKit = {
   time: SECOND,
   velocity: FOOT_PER_SECOND,
   acceleration: FOOT_PER_SECOND_SQUARED,
+  angle: DEGREE,
 };
 
 export function unitKit(system: UnitSystem): UnitKit {

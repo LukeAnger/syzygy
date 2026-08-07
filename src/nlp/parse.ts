@@ -18,6 +18,10 @@ import type { DomainId } from '../domains/index.ts';
 const RULES_FOR: Record<DomainId, typeof RULES> = {
   'kinematics-1d': RULES,
   'relative-velocity': RELATIVE_RULES,
+  // No prose rules yet: 2-D problems state directions in words ("straight
+  // across", "downstream") that nothing here can turn into an angle. Manual
+  // entry works; Storymode will report it read nothing rather than guess.
+  'relative-velocity-2d': [],
 };
 import { detectQuestion } from './question.ts';
 

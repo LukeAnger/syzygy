@@ -9,12 +9,14 @@
 import type { Domain } from '../engine/index.ts';
 import { kinematics1D } from './kinematics-1d/index.ts';
 import { relativeVelocity } from './relative-velocity/index.ts';
+import { relativeVelocity2D } from './relative-velocity-2d/index.ts';
 
-export type DomainId = 'kinematics-1d' | 'relative-velocity';
+export type DomainId = 'kinematics-1d' | 'relative-velocity' | 'relative-velocity-2d';
 
 export const DOMAINS: Record<DomainId, Domain> = {
   'kinematics-1d': kinematics1D,
   'relative-velocity': relativeVelocity,
+  'relative-velocity-2d': relativeVelocity2D,
 };
 
 export const DOMAIN_IDS = Object.keys(DOMAINS) as DomainId[];

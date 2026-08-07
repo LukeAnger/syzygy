@@ -18,6 +18,7 @@ import styles from './DomainBanner.module.css';
 const BLURB: Record<DomainId, string> = {
   'kinematics-1d': 'one object, constant acceleration',
   'relative-velocity': 'two bodies moving along a line',
+  'relative-velocity-2d': 'velocities combined in a plane',
 };
 
 export function DomainBanner() {

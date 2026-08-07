@@ -622,6 +622,26 @@ Enabled by the layered design; **not** built in v1.
 
   Phases, segmentation, the ground-landing default, the motion chart and the
   free-fall preset are all one-object ideas and stay switched off elsewhere.
+
+  **`relative-velocity-2d`** is the third pack, prompted by a real problem set
+  where five of seven questions turned out to need a plane rather than a line.
+  It models one relation — `R = V₁ + V₂` — because composition and relative
+  motion are the same thing read in different directions: "the duck relative to
+  the ground" adds two vectors, "the motorcycle seen from the car" solves the
+  same equations for `V₁`. Each vector carries two components, a magnitude and
+  a direction, which is also how the topic is taught.
+
+  Angles are dimensionless and stored in radians, with degrees as the display
+  unit — the same input-versus-display split as km/h against m/s, and it needed
+  `sin`, `cos`, `atan2` and `hypot` in the math core. `atan2` rather than
+  `atan(y/x)` so all four quadrants stay distinct. Directions are measured
+  anticlockwise from +x and nothing assumes "from north" or "off straight
+  across", since those are per-problem conventions.
+
+  No prose parser yet: 2-D problems state directions in words ("straight
+  across", "downstream", "into the wind") that no rule can turn into an angle.
+  Manual entry solves them; Storymode reports it read nothing rather than
+  guessing.
 - ⬜ Ingest endpoint + batch rule-suggestion pipeline (out of static-app scope).
 - 🟢 **Multi-phase motion.** *"Drops off a roof at 150 m onto another roof 30 m
   high, then rolls off and falls to the ground — how fast is it going when it

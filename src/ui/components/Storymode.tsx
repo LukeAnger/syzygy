@@ -20,6 +20,9 @@ const EXAMPLES: Record<DomainId, string[]> = {
     'Two trains 600 m apart travel towards each other at 30 m/s and 20 m/s',
     'A car at 30 m/s overtakes a truck moving at 20 m/s, 100 m ahead',
   ],
+  // Nothing to offer: 2-D problems have no parser yet, and suggesting one
+  // would promise a reading the app cannot perform.
+  'relative-velocity-2d': [],
 };
 
 /** Minimal typing for the vendor-prefixed Web Speech API. */
